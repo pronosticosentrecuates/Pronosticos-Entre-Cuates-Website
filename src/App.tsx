@@ -1276,7 +1276,7 @@ function App() {
             📋 Registro al momento/Verificador
           </button>
           <button className={`nav-link-btn${activeView === 'resultados' ? ' active' : ''}`} onClick={() => openView('resultados')} type="button">
-            Resultados de la Jornada
+            🏆 Resultados de la Jornada
           </button>
           <button className={`nav-link-btn${activeView === 'admin' ? ' active' : ''}`} onClick={() => openView('admin')} type="button">
             🔐 Admin
