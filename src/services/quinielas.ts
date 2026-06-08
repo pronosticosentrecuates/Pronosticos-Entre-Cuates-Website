@@ -176,7 +176,7 @@ export async function lookupQuiniela(folio: string, phone: string, nombre: strin
   if (error) throw error
   if (!data) return []
   const rows = Array.isArray(data) ? data : [data]
-  return (rows as QuinielaRow[]).map((row) => mapQuiniela({ ...row, celular: '', combinations: [], selections: row.selections ?? [] }))
+  return (rows as QuinielaRow[]).map((row) => mapQuiniela({ ...row, combinations: [], selections: row.selections ?? [] }))
 }
 
 export async function loadApprovedQuinielas(jornadaId?: number): Promise<SavedQuiniela[]> {

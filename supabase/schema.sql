@@ -57,6 +57,21 @@ CREATE TABLE IF NOT EXISTS public.combinations (
 CREATE INDEX IF NOT EXISTS idx_selections_quiniela_id ON public.selections(quiniela_id);
 CREATE INDEX IF NOT EXISTS idx_combinations_quiniela_id ON public.combinations(quiniela_id);
 
+CREATE SEQUENCE IF NOT EXISTS public.quinielas_id_seq;
+ALTER SEQUENCE public.quinielas_id_seq OWNED BY public.quinielas.id;
+ALTER TABLE public.quinielas ALTER COLUMN id SET DEFAULT nextval('public.quinielas_id_seq'::regclass);
+SELECT setval('public.quinielas_id_seq', greatest(coalesce((SELECT max(id) FROM public.quinielas), 0) + 1, 1), false);
+
+CREATE SEQUENCE IF NOT EXISTS public.selections_id_seq;
+ALTER SEQUENCE public.selections_id_seq OWNED BY public.selections.id;
+ALTER TABLE public.selections ALTER COLUMN id SET DEFAULT nextval('public.selections_id_seq'::regclass);
+SELECT setval('public.selections_id_seq', greatest(coalesce((SELECT max(id) FROM public.selections), 0) + 1, 1), false);
+
+CREATE SEQUENCE IF NOT EXISTS public.combinations_id_seq;
+ALTER SEQUENCE public.combinations_id_seq OWNED BY public.combinations.id;
+ALTER TABLE public.combinations ALTER COLUMN id SET DEFAULT nextval('public.combinations_id_seq'::regclass);
+SELECT setval('public.combinations_id_seq', greatest(coalesce((SELECT max(id) FROM public.combinations), 0) + 1, 1), false);
+
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS boolean
 LANGUAGE sql

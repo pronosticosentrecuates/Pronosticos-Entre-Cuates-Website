@@ -41,7 +41,7 @@ import {
 import type { Jornada, JornadaStatus, PaymentStatus, PublicStats, QuinielaStatus, SavedQuiniela } from './types'
 import { getSupabase } from '../utils/supabase'
 
-type AppView = 'home' | 'registro' | 'admin'
+type AppView = 'home' | 'registro' | 'resultados' | 'admin'
 type AdminTab = 'quinielas' | 'create' | 'jornadas'
 
 type ToastKind = 'success' | 'error' | 'info'
@@ -283,6 +283,7 @@ function App() {
   const [lookupPhone, setLookupPhone] = useState('')
   const [lookupName, setLookupName] = useState('')
   const [lookupResults, setLookupResults] = useState<SavedQuiniela[]>([])
+  const [lookupHasSearched, setLookupHasSearched] = useState(false)
   const [lookupMessage, setLookupMessage] = useState('')
   const [newJornadaName, setNewJornadaName] = useState('')
   const [newJornadaClose, setNewJornadaClose] = useState('')
@@ -948,6 +949,7 @@ function App() {
   const handleLookup = async () => {
     setLookupMessage('')
     setLookupResults([])
+    setLookupHasSearched(false)
     const cleanLookupPhone = normalizePhone(lookupPhone)
     const hasLookupFolio = lookupFolio.trim().length > 0
     const hasLookupPhone = cleanLookupPhone.length === 10
@@ -956,15 +958,91 @@ function App() {
       setLookupMessage('Ingresa al menos un dato: folio, celular completo de 10 digitos o nombre registrado.')
       return
     }
+    setLookupHasSearched(true)
     try {
       const result = await lookupQuiniela(lookupFolio.trim(), cleanLookupPhone, lookupName.trim())
-      setLookupResults(result)
-      setLookupMessage(result.length > 0 ? '' : 'No encontramos quinielas con esos datos.')
+      const jornadaResults = result.filter((quiniela) => !openJornadaId || quiniela.jornadaId === openJornadaId)
+      setLookupResults(jornadaResults)
+      setLookupMessage(jornadaResults.length > 0 ? '' : 'No encontramos quinielas con esos datos.')
     } catch (error) {
       console.error(error)
       setLookupMessage('No se pudo consultar la quiniela.')
     }
   }
+
+  const clearLookupState = () => {
+    setLookupMessage('')
+    setLookupResults([])
+    setLookupHasSearched(false)
+  }
+
+  const formatQuinielaStatus = (status: QuinielaStatus) => {
+    if (status === 'accepted') return 'Aceptada'
+    if (status === 'cancelled') return 'Rechazada'
+    return 'Pendiente'
+  }
+
+  const renderRegistroTable = (rows: SavedQuiniela[], showStatus = false) => (
+    <div className="registro-table-wrap">
+      <table className="registro-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nombre</th>
+            {showStatus ? <th>Teléfono</th> : null}
+            {registroMatches.map((match) => (
+              <th key={match.id}>
+                <span className="registro-team-label">
+                  <span className="registro-team-line">
+                    {renderTeamLogo(match.local, '⚽', 'registro-team-logo')}
+                    <span>{match.local}</span>
+                  </span>
+                  <small>vs</small>
+                  <span className="registro-team-line away">
+                    <span>{match.visitante}</span>
+                    {renderTeamLogo(match.visitante, '⚽', 'registro-team-logo')}
+                  </span>
+                </span>
+              </th>
+            ))}
+            {showStatus ? <th>Estado</th> : null}
+            <th>Puntos</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((quiniela) => (
+            <tr key={quiniela.id}>
+              <td>{quiniela.folio ?? quiniela.id}</td>
+              <td>{quiniela.nombre}</td>
+              {showStatus ? <td>{quiniela.celular || '-'}</td> : null}
+              {registroMatches.map((match) => {
+                const selection = quiniela.selecciones.find((item) => item.partidoId === match.id)
+                const picks = selection?.seleccion ?? []
+
+                return (
+                  <td key={`${quiniela.id}-${match.id}`}>
+                    <span className={`registro-pick ${picks.length >= 2 ? 'multi' : picks[0] || 'empty'}`}>
+                      {selection ? formatSelection(selection) : '—'}
+                    </span>
+                  </td>
+                )
+              })}
+              {showStatus ? (
+                <td>
+                  <span className={`registro-status ${quiniela.status}`}>
+                    {formatQuinielaStatus(quiniela.status)}
+                  </span>
+                </td>
+              ) : null}
+              <td>
+                <strong>{countQuinielaPoints(quiniela, registroMatches)}</strong>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
 
   const handlePaymentChange = async (quiniela: SavedQuiniela, paymentStatus: PaymentStatus) => {
     try {
@@ -1196,6 +1274,9 @@ function App() {
           </button>
           <button className={`nav-link-btn${activeView === 'registro' ? ' active' : ''}`} onClick={() => openView('registro')} type="button">
             📋 Registro al momento/Verificador
+          </button>
+          <button className={`nav-link-btn${activeView === 'resultados' ? ' active' : ''}`} onClick={() => openView('resultados')} type="button">
+            Resultados de la Jornada
           </button>
           <button className={`nav-link-btn${activeView === 'admin' ? ' active' : ''}`} onClick={() => openView('admin')} type="button">
             🔐 Admin
@@ -1445,24 +1526,15 @@ function App() {
             <h1>Registro al momento/Verificador</h1>
             <p>Verifica tu quiniela, revisa las capturas aprobadas y consulta los resultados de la jornada en un solo lugar.</p>
             <div className="lookup-form">
-              <input className="input-field" placeholder="Folio, por ejemplo Q1-000001" value={lookupFolio} onChange={(event) => setLookupFolio(event.target.value)} />
-              <input className="input-field" inputMode="tel" maxLength={10} placeholder="Celular completo" value={lookupPhone} onChange={(event) => setLookupPhone(normalizePhone(event.target.value))} />
-              <input className="input-field" placeholder="Nombre registrado" value={lookupName} onChange={(event) => setLookupName(event.target.value)} />
+              <input className="input-field" placeholder="Folio, por ejemplo Q1-000001" value={lookupFolio} onChange={(event) => { setLookupFolio(event.target.value); clearLookupState() }} />
+              <input className="input-field" inputMode="tel" maxLength={10} placeholder="Celular completo" value={lookupPhone} onChange={(event) => { setLookupPhone(normalizePhone(event.target.value)); clearLookupState() }} />
+              <input className="input-field" placeholder="Nombre registrado" value={lookupName} onChange={(event) => { setLookupName(event.target.value); clearLookupState() }} />
               <button className="registro-back" onClick={handleLookup} type="button">Consultar</button>
             </div>
             {lookupMessage ? <div className="app-notice error">{lookupMessage}</div> : null}
-            {lookupResults.length > 0 ? (
-              <div className="lookup-results">
-                {lookupResults.map((quiniela) => (
-                  <article className="lookup-result" key={quiniela.id}>
-                    <div>
-                      <strong>{quiniela.folio ?? quiniela.id}</strong>
-                      <span>{quiniela.nombre}</span>
-                    </div>
-                    <div>{quiniela.modalidad} · {quiniela.doblesUsados} dobles</div>
-                    <div>{quiniela.status === 'accepted' ? 'Aceptada' : quiniela.status === 'cancelled' ? 'Rechazada' : 'Pendiente'}</div>
-                  </article>
-                ))}
+            {lookupHasSearched && lookupResults.length > 0 ? (
+              <div className="lookup-table-area">
+                {renderRegistroTable(lookupResults, true)}
               </div>
             ) : null}
             <div className="registro-stats">
@@ -1495,58 +1567,32 @@ function App() {
             {registroQuinielas.length === 0 ? (
               <div className="registro-empty">{openJornadaId ? 'Todavia no hay quinielas aprobadas para esta jornada.' : 'No hay una jornada abierta en este momento.'}</div>
             ) : (
-              <div className="registro-table-wrap">
-                <table className="registro-table">
-                  <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>Nombre</th>
-                      {registroMatches.map((match) => (
-                        <th key={match.id}>
-                          <span className="registro-team-label">
-                            <span className="registro-team-line">
-                              {renderTeamLogo(match.local, '⚽', 'registro-team-logo')}
-                              <span>{match.local}</span>
-                            </span>
-                            <small>vs</small>
-                            <span className="registro-team-line away">
-                              <span>{match.visitante}</span>
-                              {renderTeamLogo(match.visitante, '⚽', 'registro-team-logo')}
-                            </span>
-                          </span>
-                        </th>
-                      ))}
-                      <th>Puntos</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {registroQuinielas.map((quiniela) => (
-                      <tr key={quiniela.id}>
-                        <td>{quiniela.folio ?? quiniela.id}</td>
-                        <td>{quiniela.nombre}</td>
-                        {registroMatches.map((match) => {
-                          const selection = quiniela.selecciones.find((item) => item.partidoId === match.id)
-                          const picks = selection?.seleccion ?? []
-
-                          return (
-                            <td key={`${quiniela.id}-${match.id}`}>
-                              <span className={`registro-pick ${picks.length >= 2 ? 'multi' : picks[0] || 'empty'}`}>
-                                {selection ? formatSelection(selection) : '—'}
-                              </span>
-                            </td>
-                          )
-                        })}
-                        <td>
-                          <strong>{countQuinielaPoints(quiniela, registroMatches)}</strong>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              renderRegistroTable(registroQuinielas)
             )}
           </section>
 
+        </main>
+      ) : activeView === 'resultados' ? (
+        <main className="resultados-view">
+          <section className="resultados-hero">
+            <div className="resultados-kicker">Resultados de la jornada</div>
+            <h1>Resultados de la Jornada</h1>
+            <p>Consulta marcadores oficiales, estado de partidos y tabla general de participantes para la jornada actual.</p>
+            <div className="resultados-stats">
+              <article>
+                <span>Partidos</span>
+                <strong>{matches.length}</strong>
+              </article>
+              <article>
+                <span>Quinielas aceptadas</span>
+                <strong>{publicApprovedQuinielas.length}</strong>
+              </article>
+              <article>
+                <span>Bolsa aceptada</span>
+                <strong>${registroTotalAcumulado.toFixed(2)}</strong>
+              </article>
+            </div>
+          </section>
           <section className="resultados-card">
             <div className="resultados-card-head">
               <div>
