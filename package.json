@@ -1,0 +1,31 @@
+{
+  "name": "pagina",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint src utils",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "eslint": "^10.4.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.60.1",
+    "vite": "^8.0.12",
+    "vitest": "^4.1.8"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.106.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
+  }
+}
