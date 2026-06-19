@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Match, MatchSelection, Modalidad, PickOption, QuinielaData } from '../data'
-import type { Jornada, JornadaStatus, PaymentStatus, PublicRankingEntry, PublicStats, QuinielaStatus, SavedQuiniela } from '../types'
+import type { Jornada, JornadaStatus, PaymentStatus, PublicRankingEntry, PublicStats, QuinielaStatus, SavedQuiniela, Tournament, TournamentStatus } from '../types'
 import { getSupabase } from '../../utils/supabase'
 
 type MatchRow = {
@@ -18,12 +18,25 @@ type MatchRow = {
 
 type JornadaRow = {
   id: number
+  tournament_id: number | null
   nombre: string
+  numero: number | null
   status: JornadaStatus
+  open_at: string | null
   close_at: string | null
   first_prize: number | string
   second_prize: number | string
   notes: string
+  created_at: string
+  finished_at: string | null
+}
+
+type TournamentRow = {
+  id: number
+  nombre: string
+  liga: string | null
+  temporada: string | null
+  status: TournamentStatus
   created_at: string
   finished_at: string | null
 }
@@ -84,12 +97,27 @@ function mapJornada(row: JornadaRow | null | undefined): Jornada | null {
   if (!row) return null
   return {
     id: row.id,
+    tournamentId: row.tournament_id ?? null,
     nombre: row.nombre,
+    numero: row.numero ?? null,
     status: row.status,
+    openAt: row.open_at,
     closeAt: row.close_at,
     firstPrize: Number(row.first_prize ?? 0),
     secondPrize: Number(row.second_prize ?? 0),
     notes: row.notes ?? '',
+    createdAt: row.created_at,
+    finishedAt: row.finished_at,
+  }
+}
+
+function mapTournament(row: TournamentRow): Tournament {
+  return {
+    id: row.id,
+    nombre: row.nombre,
+    liga: row.liga ?? '',
+    temporada: row.temporada ?? '',
+    status: row.status,
     createdAt: row.created_at,
     finishedAt: row.finished_at,
   }
@@ -220,6 +248,16 @@ export async function loadJornadas(): Promise<Jornada[]> {
   return ((data ?? []) as JornadaRow[]).map((row) => mapJornada(row)!)
 }
 
+export async function loadTournaments(): Promise<Tournament[]> {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase.from('tournaments').select('*').order('id', { ascending: false })
+  if (error) {
+    if (error.code === '42P01' || error.code === '42703') return []
+    throw error
+  }
+  return ((data ?? []) as TournamentRow[]).map(mapTournament)
+}
+
 export async function loadQuinielas(jornadaId?: number): Promise<SavedQuiniela[]> {
   const supabase = requireSupabase()
   let query = supabase.from('quinielas').select('*, selections(partido_id, seleccion), combinations(combination)').order('id', { ascending: true })
@@ -246,10 +284,36 @@ export async function registerQuiniela(quiniela: QuinielaData, status: QuinielaS
   return String(data)
 }
 
-export async function createJornada(input: { nombre: string; closeAt: string | null; firstPrize: number; secondPrize: number }) {
+export async function createTournament(input: { nombre: string; liga: string; temporada: string; status?: TournamentStatus }) {
+  const supabase = requireSupabase()
+  const { error } = await supabase.from('tournaments').insert({
+    nombre: input.nombre,
+    liga: input.liga,
+    temporada: input.temporada,
+    status: input.status ?? 'active',
+  })
+  if (error) throw error
+}
+
+export async function updateTournament(id: number, patch: Partial<{ nombre: string; liga: string; temporada: string; status: TournamentStatus }>) {
+  const supabase = requireSupabase()
+  const payload: Record<string, unknown> = {}
+  if (patch.nombre !== undefined) payload.nombre = patch.nombre
+  if (patch.liga !== undefined) payload.liga = patch.liga
+  if (patch.temporada !== undefined) payload.temporada = patch.temporada
+  if (patch.status !== undefined) payload.status = patch.status
+  if (patch.status === 'finished') payload.finished_at = new Date().toISOString()
+  const { error } = await supabase.from('tournaments').update(payload).eq('id', id)
+  if (error) throw error
+}
+
+export async function createJornada(input: { tournamentId: number | null; nombre: string; numero: number | null; openAt: string | null; closeAt: string | null; firstPrize: number; secondPrize: number }) {
   const supabase = requireSupabase()
   const { error } = await supabase.from('jornadas').insert({
+    tournament_id: input.tournamentId,
     nombre: input.nombre,
+    numero: input.numero,
+    open_at: input.openAt,
     close_at: input.closeAt,
     first_prize: input.firstPrize,
     second_prize: input.secondPrize,
@@ -258,15 +322,18 @@ export async function createJornada(input: { nombre: string; closeAt: string | n
   if (error) throw error
 }
 
-export async function updateJornada(id: number, patch: Partial<{ nombre: string; status: JornadaStatus; closeAt: string | null; firstPrize: number; secondPrize: number; notes: string }>) {
+export async function updateJornada(id: number, patch: Partial<{ tournamentId: number | null; nombre: string; numero: number | null; status: JornadaStatus; openAt: string | null; closeAt: string | null; firstPrize: number; secondPrize: number; notes: string }>) {
   const supabase = requireSupabase()
   if (patch.status === 'open') {
     const { error: closeError } = await supabase.from('jornadas').update({ status: 'closed' }).eq('status', 'open').neq('id', id)
     if (closeError) throw closeError
   }
   const payload: Record<string, unknown> = {}
+  if (patch.tournamentId !== undefined) payload.tournament_id = patch.tournamentId
   if (patch.nombre !== undefined) payload.nombre = patch.nombre
+  if (patch.numero !== undefined) payload.numero = patch.numero
   if (patch.status !== undefined) payload.status = patch.status
+  if (patch.openAt !== undefined) payload.open_at = patch.openAt
   if (patch.closeAt !== undefined) payload.close_at = patch.closeAt
   if (patch.firstPrize !== undefined) payload.first_prize = patch.firstPrize
   if (patch.secondPrize !== undefined) payload.second_prize = patch.secondPrize
@@ -299,6 +366,45 @@ export async function updateQuinielaPrize(id: number, amount: number, paid: bool
     prize_paid_at: paid ? new Date().toISOString() : null,
   }).eq('id', id)
   if (error) throw error
+}
+
+export async function updateQuinielaDetails(id: number, quiniela: QuinielaData) {
+  const supabase = requireSupabase()
+  const { error: quinielaError } = await supabase.from('quinielas').update({
+    jornada_id: quiniela.jornadaId,
+    nombre: quiniela.nombre.trim(),
+    celular: quiniela.celular,
+    modalidad: quiniela.modalidad,
+    costo: quiniela.costo,
+    dobles_usados: quiniela.doblesUsados,
+  }).eq('id', id)
+  if (quinielaError) throw quinielaError
+
+  const { error: deleteSelectionsError } = await supabase.from('selections').delete().eq('quiniela_id', id)
+  if (deleteSelectionsError) throw deleteSelectionsError
+
+  const { error: deleteCombinationsError } = await supabase.from('combinations').delete().eq('quiniela_id', id)
+  if (deleteCombinationsError) throw deleteCombinationsError
+
+  const selectionsPayload = quiniela.selecciones.map((selection) => ({
+    quiniela_id: id,
+    partido_id: selection.partidoId,
+    seleccion: selection.seleccion,
+  }))
+  const combinationsPayload = quiniela.combinaciones.map((combination) => ({
+    quiniela_id: id,
+    combination,
+  }))
+
+  if (selectionsPayload.length > 0) {
+    const { error } = await supabase.from('selections').insert(selectionsPayload)
+    if (error) throw error
+  }
+
+  if (combinationsPayload.length > 0) {
+    const { error } = await supabase.from('combinations').insert(combinationsPayload)
+    if (error) throw error
+  }
 }
 
 export async function distributeJornadaPrizes(jornadaId: number) {
@@ -346,7 +452,21 @@ export async function updateMatch(match: Match) {
 
 export async function deleteMatchById(id: number) {
   const supabase = requireSupabase()
+
+  const { count, error: selectionsError } = await supabase
+    .from('selections')
+    .select('id', { count: 'exact', head: true })
+    .eq('partido_id', id)
+  if (selectionsError) throw selectionsError
+
+  if ((count ?? 0) > 0) {
+    throw new Error('No se puede eliminar este partido porque ya tiene quinielas registradas. Puedes editarlo o cancelar las quinielas relacionadas antes de borrarlo.')
+  }
+
   const { error } = await supabase.from('matches').delete().eq('id', id)
+  if (error?.code === '23503') {
+    throw new Error('No se puede eliminar este partido porque ya tiene quinielas registradas. Puedes editarlo o cancelar las quinielas relacionadas antes de borrarlo.')
+  }
   if (error) throw error
 }
 

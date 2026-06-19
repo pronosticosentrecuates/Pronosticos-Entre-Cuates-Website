@@ -3,11 +3,25 @@ import type { QuinielaData } from './data'
 export type QuinielaStatus = 'pending' | 'accepted' | 'cancelled'
 export type PaymentStatus = 'pending' | 'paid' | 'refunded'
 export type JornadaStatus = 'draft' | 'open' | 'closed' | 'finished'
+export type TournamentStatus = 'draft' | 'active' | 'finished'
+
+export type Tournament = {
+  id: number
+  nombre: string
+  liga: string
+  temporada: string
+  status: TournamentStatus
+  createdAt: string
+  finishedAt: string | null
+}
 
 export type Jornada = {
   id: number
+  tournamentId: number | null
   nombre: string
+  numero: number | null
   status: JornadaStatus
+  openAt: string | null
   closeAt: string | null
   firstPrize: number
   secondPrize: number

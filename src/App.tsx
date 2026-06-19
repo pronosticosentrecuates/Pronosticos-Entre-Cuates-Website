@@ -7,7 +7,6 @@ import {
   generateRandomSelections,
   getCosto,
   getMaxDobles,
-  MATCHES,
   toggleSelection,
   validateQuinielaCompleta,
   type Match,
@@ -15,11 +14,12 @@ import {
   type Modalidad,
   type PickOption,
 } from './data'
-import { APP_CONFIG } from './config'
+import { APP_CONFIG, TEAM_LOGOS } from './config'
 import {
   deleteMatchById,
   deleteQuinielaById,
   createJornada,
+  createTournament,
   distributeJornadaPrizes,
   getSessionUser,
   insertMatch,
@@ -28,17 +28,20 @@ import {
   loadMatches,
   loadPublicDashboard,
   loadQuinielas,
+  loadTournaments,
   lookupQuiniela,
   registerQuiniela,
   signInAdmin,
   signOutAdmin,
   updateJornada,
   updateMatch,
+  updateTournament,
+  updateQuinielaDetails,
   updateQuinielaPayment,
   updateQuinielaPrize,
   updateQuinielaStatus,
 } from './services/quinielas'
-import type { Jornada, JornadaStatus, PaymentStatus, PublicStats, QuinielaStatus, SavedQuiniela } from './types'
+import type { Jornada, JornadaStatus, PaymentStatus, PublicStats, QuinielaStatus, SavedQuiniela, Tournament, TournamentStatus } from './types'
 import { getSupabase } from '../utils/supabase'
 
 type AppView = 'home' | 'registro' | 'resultados' | 'admin'
@@ -56,28 +59,49 @@ type ConfirmAction = {
   id: number
 } | null
 
+type ImportedMatch = Omit<Match, 'id'> & {
+  sourceId: string
+  round: string
+}
+
 const MODALIDADES: Modalidad[] = ['3 dobles', '5 dobles']
 const QUINIELAS_STORAGE_KEY = 'rrad-quinielas'
 const QUINIELAS_REFRESH_STORAGE_KEY = 'rrad-quinielas-refresh'
-const TEAM_LOGOS: Record<string, string> = {
-  'Cruz Azul': 'https://r2.thesportsdb.com/images/media/team/badge/cf4ozx1655760184.png',
-  Pumas: 'https://r2.thesportsdb.com/images/media/team/badge/o01nvl1695734937.png',
-  América: 'https://r2.thesportsdb.com/images/media/team/badge/amy1xs1581857392.png',
-  Atlas: 'https://r2.thesportsdb.com/images/media/team/badge/svvyvw1473541813.png',
-  'Atletico de San Luis': 'https://r2.thesportsdb.com/images/media/team/badge/9kgjme1593448412.png',
-  'CD Guadalajara': 'https://r2.thesportsdb.com/images/media/team/badge/mp1box1593452087.png',
-  Juárez: 'https://r2.thesportsdb.com/images/media/team/badge/b4oy071567446336.png',
-  León: 'https://r2.thesportsdb.com/images/media/team/badge/pc9gro1752393439.png',
-  Mazatlán: 'https://r2.thesportsdb.com/images/media/team/badge/fgpobf1593446489.png',
-  Monterrey: 'https://r2.thesportsdb.com/images/media/team/badge/yglj911721542561.png',
-  Necaxa: 'https://r2.thesportsdb.com/images/media/team/badge/k9duyw1747334895.png',
-  Pachuca: 'https://r2.thesportsdb.com/images/media/team/badge/h0jgg51593451845.png',
-  Puebla: 'https://r2.thesportsdb.com/images/media/team/badge/o01nvl1695734937.png',
-  Querétaro: 'https://r2.thesportsdb.com/images/media/team/badge/ev79tu1752393416.png',
-  'Santos Laguna': 'https://r2.thesportsdb.com/images/media/team/badge/lh80fx1701423708.png',
-  Tigres: 'https://upload.wikimedia.org/wikipedia/commons/e/e4/Escudo_del_Club_de_F%C3%BAtbol_Tigres_UANL.svg',
-  Tijuana: 'https://www.thesportsdb.com/images/media/team/badge/b0mky81779772352.png',
-  Toluca: 'https://r2.thesportsdb.com/images/media/team/badge/y64wy91523913186.png',
+const LIGA_MX_LEAGUE_ID = '4350'
+const LIGA_MX_DEFAULT_SEASON = '2026-2027'
+const SPORTSDB_KEY = import.meta.env.VITE_THESPORTSDB_KEY || '123'
+const MEXICO_TIME_ZONE = 'America/Mexico_City'
+const LIGA_MX_TEAM_ALIASES: Record<string, string> = {
+  'Club America': 'América',
+  America: 'América',
+  'Atlas FC': 'Atlas',
+  'Atletico San Luis': 'Atletico de San Luis',
+  'Atl. San Luis': 'Atletico de San Luis',
+  'CD Guadalajara': 'CD Guadalajara',
+  Chivas: 'CD Guadalajara',
+  'FC Juarez': 'Juárez',
+  'Club Leon': 'León',
+  Leon: 'León',
+  'Mazatlan FC': 'Mazatlán',
+  Monterrey: 'Monterrey',
+  Necaxa: 'Necaxa',
+  Pachuca: 'Pachuca',
+  Puebla: 'Puebla',
+  Pumas: 'Pumas',
+  'Pumas UNAM': 'Pumas',
+  'UNAM Pumas': 'Pumas',
+  'U.N.A.M.': 'Pumas',
+  'Club Universidad Nacional': 'Pumas',
+  Queretaro: 'Querétaro',
+  'Santos Laguna': 'Santos Laguna',
+  Tigres: 'Tigres',
+  'Tigres UANL': 'Tigres',
+  'UANL Tigres': 'Tigres',
+  'Club Tigres': 'Tigres',
+  'Tigres de la UANL': 'Tigres',
+  'Club Tijuana': 'Tijuana',
+  Tijuana: 'Tijuana',
+  Toluca: 'Toluca',
 }
 
 // Note: quinielas and matches will be loaded from Supabase on mount.
@@ -86,8 +110,37 @@ function normalizePhone(value: string) {
   return value.replace(/\D/g, '')
 }
 
-function isHttpUrl(value: string) {
-  return /^https?:\/\//i.test(value)
+function normalizeLigaMxTeamName(teamName: string) {
+  return LIGA_MX_TEAM_ALIASES[teamName] ?? teamName
+}
+
+function getMexicoDateTimeParts(dateEvent?: string | null, strTime?: string | null) {
+  if (!dateEvent) {
+    return { value: 'TBD', timeClass: '' }
+  }
+
+  const time = strTime && /^\d{2}:\d{2}/.test(strTime) ? strTime.slice(0, 5) : '00:00'
+  const utcDate = new Date(`${dateEvent}T${time}:00Z`)
+  if (Number.isNaN(utcDate.getTime())) {
+    return { value: 'TBD', timeClass: '' }
+  }
+
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: MEXICO_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    weekday: 'short',
+    hourCycle: 'h23',
+  }).formatToParts(utcDate)
+  const pick = (type: string) => parts.find((part) => part.type === type)?.value ?? ''
+
+  return {
+    value: `${pick('year')}-${pick('month')}-${pick('day')}T${pick('hour')}:${pick('minute')}`,
+    timeClass: pick('weekday').toLowerCase().startsWith('sun') ? 'dom' : '',
+  }
 }
 
 function isValidPhone(value: string) {
@@ -104,9 +157,10 @@ function formatSelection(selection: MatchSelection) {
 
 function TeamLogo({ teamName, fallback, className }: { teamName: string; fallback: string; className: string }) {
   const [failed, setFailed] = useState(false)
-  const logoSource = TEAM_LOGOS[teamName]
+  const normalizedTeamName = teamName.trim().toLowerCase()
+  const logoSource = TEAM_LOGOS[teamName] ?? Object.entries(TEAM_LOGOS).find(([name]) => name.trim().toLowerCase() === normalizedTeamName)?.[1]
 
-  if (failed || !isHttpUrl(logoSource)) {
+  if (failed || !logoSource) {
     return <span className={`team-logo-emoji ${className}`}>{fallback}</span>
   }
 
@@ -250,11 +304,13 @@ function formatPrizeLabel(amount: number | null | undefined, fallback: string) {
 }
 
 function App() {
-  const [matches, setMatches] = useState<Match[]>(MATCHES)
+  const [matches, setMatches] = useState<Match[]>([])
   const [adminMatches, setAdminMatches] = useState<Match[]>([])
-  const [selecciones, setSelecciones] = useState<MatchSelection[]>(() => createEmptySelections(MATCHES))
+  const [selecciones, setSelecciones] = useState<MatchSelection[]>([])
   const [quinielas, setQuinielas] = useState<SavedQuiniela[]>([])
   const [jornada, setJornada] = useState<Jornada | null>(null)
+  const [now, setNow] = useState(() => Date.now())
+  const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [jornadas, setJornadas] = useState<Jornada[]>([])
   const [publicStats, setPublicStats] = useState<PublicStats>({ registered: 0, accepted: 0, pool: 0 })
   const [publicApprovedQuinielas, setPublicApprovedQuinielas] = useState<SavedQuiniela[]>([])
@@ -277,6 +333,16 @@ function App() {
   const [adminStatusFilter, setAdminStatusFilter] = useState<'all' | QuinielaStatus>('all')
   const [adminModalFilter, setAdminModalFilter] = useState<'all' | Modalidad>('all')
   const [adminPaymentFilter, setAdminPaymentFilter] = useState<'all' | PaymentStatus>('all')
+  const [adminEditQuinielaId, setAdminEditQuinielaId] = useState<number | null>(null)
+  const [adminQuinielaNombre, setAdminQuinielaNombre] = useState('')
+  const [adminQuinielaCelular, setAdminQuinielaCelular] = useState('')
+  const [adminQuinielaModalidad, setAdminQuinielaModalidad] = useState<Modalidad>('3 dobles')
+  const [adminQuinielaSelections, setAdminQuinielaSelections] = useState<MatchSelection[]>([])
+  const [adminQuinielaJornadaId, setAdminQuinielaJornadaId] = useState<number | null>(null)
+  const [savingAdminQuiniela, setSavingAdminQuiniela] = useState(false)
+  const [showAdminQuinielaModal, setShowAdminQuinielaModal] = useState(false)
+  const [showTournamentModal, setShowTournamentModal] = useState(false)
+  const [showJornadaModal, setShowJornadaModal] = useState(false)
   const [rankingModalFilter, setRankingModalFilter] = useState<'all' | Modalidad>('all')
   const [rankingSortOrder, setRankingSortOrder] = useState<'desc' | 'asc'>('desc')
   const [lookupFolio, setLookupFolio] = useState('')
@@ -285,7 +351,13 @@ function App() {
   const [lookupResults, setLookupResults] = useState<SavedQuiniela[]>([])
   const [lookupHasSearched, setLookupHasSearched] = useState(false)
   const [lookupMessage, setLookupMessage] = useState('')
+  const [newTournamentName, setNewTournamentName] = useState('')
+  const [newTournamentLeague, setNewTournamentLeague] = useState('Liga MX')
+  const [newTournamentSeason, setNewTournamentSeason] = useState(LIGA_MX_DEFAULT_SEASON)
   const [newJornadaName, setNewJornadaName] = useState('')
+  const [newJornadaTournamentId, setNewJornadaTournamentId] = useState('')
+  const [newJornadaNumber, setNewJornadaNumber] = useState('')
+  const [newJornadaOpen, setNewJornadaOpen] = useState('')
   const [newJornadaClose, setNewJornadaClose] = useState('')
   const [newJornadaFirstPrize, setNewJornadaFirstPrize] = useState('')
   const [newJornadaSecondPrize, setNewJornadaSecondPrize] = useState('')
@@ -294,6 +366,12 @@ function App() {
   const [newMatchDate, setNewMatchDate] = useState('')
   const [newMatchTime, setNewMatchTime] = useState('')
   const [newMatchJornadaId, setNewMatchJornadaId] = useState('')
+  const [ligaMxSeason, setLigaMxSeason] = useState(LIGA_MX_DEFAULT_SEASON)
+  const [ligaMxRound, setLigaMxRound] = useState('')
+  const [ligaMxImportMatches, setLigaMxImportMatches] = useState<ImportedMatch[]>([])
+  const [loadingLigaMxMatches, setLoadingLigaMxMatches] = useState(false)
+  const [savingLigaMxMatches, setSavingLigaMxMatches] = useState(false)
+  const [ligaMxImportMessage, setLigaMxImportMessage] = useState('')
   const [matchJornadaFilter, setMatchJornadaFilter] = useState('all')
   const [editingMatchId, setEditingMatchId] = useState<number | null>(null)
   const [editLocal, setEditLocal] = useState('')
@@ -305,6 +383,9 @@ function App() {
   const [editMatchJornadaId, setEditMatchJornadaId] = useState('')
   const [editingJornadaId, setEditingJornadaId] = useState<number | null>(null)
   const [editJornadaName, setEditJornadaName] = useState('')
+  const [editJornadaTournamentId, setEditJornadaTournamentId] = useState('')
+  const [editJornadaNumber, setEditJornadaNumber] = useState('')
+  const [editJornadaOpen, setEditJornadaOpen] = useState('')
   const [editJornadaClose, setEditJornadaClose] = useState('')
   const [editJornadaFirstPrize, setEditJornadaFirstPrize] = useState('')
   const [editJornadaSecondPrize, setEditJornadaSecondPrize] = useState('')
@@ -323,14 +404,29 @@ function App() {
   const [toast, setToast] = useState<ToastState>(null)
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null)
   const nextId = useRef(1)
-  const openJornadas = useMemo(() => jornadas.filter((item) => item.status === 'open'), [jornadas])
-  const adminMatchSource = adminMatches.length > 0 ? adminMatches : matches
+  const isJornadaOpenBySchedule = useCallback((item: Jornada | null | undefined) => {
+    if (!item) return false
+    const openedByStatus = item.status === 'open'
+    const openedByDate = item.status === 'draft' && item.openAt !== null && now >= new Date(item.openAt).getTime()
+    const closedByDate = item.closeAt !== null && now >= new Date(item.closeAt).getTime()
+
+    return (openedByStatus || openedByDate) && item.status !== 'closed' && item.status !== 'finished' && !closedByDate
+  }, [now])
+  const activeTournaments = useMemo(() => tournaments.filter((item) => item.status !== 'finished'), [tournaments])
+  const defaultTournament = activeTournaments[0] ?? tournaments[0] ?? null
+  const openJornadas = useMemo(() => jornadas.filter((item) => item.status === 'open' || item.status === 'draft'), [jornadas])
+  const adminMatchSource = adminMatches
   const filteredAdminMatches = matchJornadaFilter === 'all'
     ? adminMatchSource
     : adminMatchSource.filter((match) => String(match.jornadaId ?? '') === matchJornadaFilter)
   const getJornadaMatches = (jornadaId: number) => {
     return adminMatchSource.filter((match) => match.jornadaId === jornadaId || (!match.jornadaId && jornada?.id === jornadaId))
   }
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 30000)
+    return () => window.clearInterval(timer)
+  }, [])
 
   useEffect(() => {
     const highestId = quinielas.reduce((maxId, quiniela) => Math.max(maxId, quiniela.id), 0)
@@ -342,7 +438,7 @@ function App() {
     async function loadFromDb() {
       try {
         const dashboard = await loadPublicDashboard()
-        if (dashboard.matches.length > 0) setMatches(dashboard.matches)
+        setMatches(dashboard.matches)
         setJornada(dashboard.jornada)
         setPublicStats(dashboard.stats)
         const dashboardJornadaId = dashboard.jornada?.id ?? null
@@ -357,7 +453,7 @@ function App() {
         if (!supabase) return
 
         const { data: dbMatches, error: matchesError } = await supabase.from('matches').select('*').order('id', { ascending: true })
-        if (!matchesError && Array.isArray(dbMatches) && dbMatches!.length > 0) {
+        if (!matchesError && Array.isArray(dbMatches)) {
           // Map DB rows to Match type
           setMatches(
             dbMatches!.map((m: any) => ({
@@ -410,7 +506,8 @@ function App() {
         }
       } catch (err) {
         console.error(err)
-        setDataError('No se pudo conectar con Supabase. Se muestran los partidos locales.')
+        setMatches([])
+        setDataError('No se pudo conectar con Supabase. No hay partidos locales de respaldo.')
       } finally {
         setDataLoading(false)
       }
@@ -423,7 +520,7 @@ function App() {
   const refreshQuinielas = useCallback(async () => {
     try {
       const dashboard = await loadPublicDashboard()
-      if (dashboard.matches.length > 0) setMatches(dashboard.matches)
+      setMatches(dashboard.matches)
       setJornada(dashboard.jornada)
       setPublicStats(dashboard.stats)
       const dashboardJornadaId = dashboard.jornada?.id ?? null
@@ -435,11 +532,12 @@ function App() {
 
       const user = await getSessionUser()
       if (user?.app_metadata?.role === 'admin') {
-        const [loaded, loadedJornadas, loadedMatches] = await Promise.all([loadQuinielas(), loadJornadas(), loadMatches()])
+        const [loaded, loadedJornadas, loadedMatches, loadedTournaments] = await Promise.all([loadQuinielas(), loadJornadas(), loadMatches(), loadTournaments()])
         setQuinielas(loaded)
         if (approvedQuinielas.length === 0) {
           setPublicApprovedQuinielas(dashboardJornadaId ? loaded.filter((quiniela) => quiniela.status === 'accepted' && quiniela.jornadaId === dashboardJornadaId) : [])
         }
+        setTournaments(loadedTournaments)
         setJornadas(loadedJornadas)
         setAdminMatches(loadedMatches)
       }
@@ -457,6 +555,13 @@ function App() {
   }, [matches])
 
   useEffect(() => {
+    setAdminQuinielaSelections((current) => {
+      const byMatchId = new Map(current.map((selection) => [selection.partidoId, selection]))
+      return matches.map((match) => byMatchId.get(match.id) ?? { partidoId: match.id, seleccion: [] })
+    })
+  }, [matches])
+
+  useEffect(() => {
     if (newMatchJornadaId && openJornadas.some((item) => String(item.id) === newMatchJornadaId)) {
       return
     }
@@ -464,6 +569,14 @@ function App() {
     const defaultJornada = openJornadas.find((item) => item.id === jornada?.id) ?? openJornadas[0]
     setNewMatchJornadaId(defaultJornada ? String(defaultJornada.id) : '')
   }, [jornada?.id, newMatchJornadaId, openJornadas])
+
+  useEffect(() => {
+    if (newJornadaTournamentId && tournaments.some((item) => String(item.id) === newJornadaTournamentId)) {
+      return
+    }
+
+    setNewJornadaTournamentId(defaultTournament ? String(defaultTournament.id) : '')
+  }, [defaultTournament, newJornadaTournamentId, tournaments])
 
   useEffect(() => {
     // Drafts belong only to the current home session. Remove data saved by older versions.
@@ -546,16 +659,31 @@ function App() {
   const progresoStyle = { '--progress-value': `${progresoPorcentaje}%`, '--progress-ratio': `${progresoRatio}` } as CSSProperties
   const nombreValido = isValidName(nombre)
   const celularValido = isValidPhone(celular)
-  const registrosAbiertos = jornada?.status === 'open'
+  const jornadaAbiertaPorFecha = isJornadaOpenBySchedule(jornada)
+  const jornadaPendientePorFecha = Boolean(jornada?.openAt && now < new Date(jornada.openAt).getTime() && jornada.status === 'draft')
+  const jornadaCerradaPorFecha = Boolean(jornada?.closeAt && now >= new Date(jornada.closeAt).getTime())
+  const registrosAbiertos = jornadaAbiertaPorFecha
   const puedeAgregar = registrosAbiertos && progresoCompleto && nombreValido && celularValido && doblesUsados <= maxDobles
   const totalGuardado = draftQuinielas.reduce((sum, quiniela) => sum + quiniela.costo, 0)
+  const publicPoolVisible = publicStats.pool * 0.7
   const jornadaTitle = jornada?.nombre ?? APP_CONFIG.edition
   const firstPrizeLabel = formatPrizeLabel(jornada?.firstPrize, APP_CONFIG.firstPrize)
   const secondPrizeLabel = formatPrizeLabel(jornada?.secondPrize, APP_CONFIG.secondPrize)
-  const openJornadaId = jornada?.status === 'open' ? jornada.id : null
-  const registroMatches = openJornadaId ? matches.filter((match) => match.jornadaId === openJornadaId || (!match.jornadaId && jornada?.id === openJornadaId)) : []
-  const registroQuinielas = openJornadaId ? publicApprovedQuinielas.filter((quiniela) => quiniela.jornadaId === openJornadaId) : []
+  const openJornadaId = registrosAbiertos ? jornada?.id ?? null : null
+  const registroMatches = useMemo(
+    () => openJornadaId ? matches.filter((match) => match.jornadaId === openJornadaId || (!match.jornadaId && jornada?.id === openJornadaId)) : [],
+    [jornada?.id, matches, openJornadaId],
+  )
+  const registroQuinielas = useMemo(
+    () => openJornadaId ? publicApprovedQuinielas.filter((quiniela) => quiniela.jornadaId === openJornadaId) : [],
+    [openJornadaId, publicApprovedQuinielas],
+  )
   const registroTotalAcumulado = registroQuinielas.reduce((sum, quiniela) => sum + quiniela.costo, 0)
+  const registroTotalAcumuladoVisible = registroTotalAcumulado * 0.7
+  const registroPointTotals = registroQuinielas.map((quiniela) => countQuinielaPoints(quiniela, registroMatches))
+  const registroMaxPoints = registroPointTotals.length > 0 ? Math.max(...registroPointTotals) : 0
+  const registroFirstPlaceCount = registroPointTotals.filter((points) => points === registroMaxPoints).length
+  const registroZeroPointsCount = registroPointTotals.filter((points) => points === 0).length
   const resultadosPartidos = matches.map((match) => {
     const localScore = match.localScore ?? null
     const visitanteScore = match.visitanteScore ?? null
@@ -572,11 +700,11 @@ function App() {
       outcome: getMatchOutcome(official.localScore, official.visitanteScore),
     }
   })
-  const rankingRows = useMemo(() => {
-    return publicApprovedQuinielas
+  const registroRankingRows = useMemo(() => {
+    return registroQuinielas
       .map((quiniela) => ({
         quiniela,
-        puntos: countQuinielaPoints(quiniela, matches),
+        puntos: countQuinielaPoints(quiniela, registroMatches),
       }))
       .filter(({ quiniela }) => {
         const matchesModal = rankingModalFilter === 'all' || quiniela.modalidad === rankingModalFilter
@@ -587,10 +715,25 @@ function App() {
         const pointsOrder = rankingSortOrder === 'desc' ? b.puntos - a.puntos : a.puntos - b.puntos
         return pointsOrder || a.quiniela.nombre.localeCompare(b.quiniela.nombre) || a.quiniela.id - b.quiniela.id
       })
-  }, [matches, publicApprovedQuinielas, rankingModalFilter, rankingSortOrder])
+      .map(({ quiniela }) => quiniela)
+  }, [registroMatches, registroQuinielas, rankingModalFilter, rankingSortOrder])
   const adminAcceptedTotal = quinielas.filter((quiniela) => quiniela.status === 'accepted').reduce((sum, quiniela) => sum + quiniela.costo, 0)
+  const adminAcceptedTotalVisible = adminAcceptedTotal * 0.7
   const adminAcceptedCount = quinielas.filter((quiniela) => quiniela.status === 'accepted').length
   const adminPendingCount = quinielas.filter((quiniela) => quiniela.status === 'pending').length
+  const adminQuinielaCosto = getCosto(adminQuinielaModalidad)
+  const adminQuinielaMaxDobles = getMaxDobles(adminQuinielaModalidad)
+  const adminQuinielaTargetJornadaId = adminQuinielaJornadaId ?? (isJornadaOpenBySchedule(jornada) ? jornada?.id ?? null : null)
+  const adminQuinielaMatches = adminQuinielaTargetJornadaId
+    ? adminMatchSource.filter((match) => match.jornadaId === adminQuinielaTargetJornadaId || (!match.jornadaId && jornada?.id === adminQuinielaTargetJornadaId))
+    : []
+  const adminQuinielaMatchIds = new Set(adminQuinielaMatches.map((match) => match.id))
+  const adminVisibleQuinielaSelections = adminQuinielaSelections.filter((selection) => adminQuinielaMatchIds.has(selection.partidoId))
+  const adminQuinielaDobles = countDobles(adminVisibleQuinielaSelections)
+  const adminQuinielaCombinaciones = generateCombinations(adminVisibleQuinielaSelections)
+  const adminQuinielaCompleta = adminQuinielaMatches.length > 0 && validateQuinielaCompleta(adminVisibleQuinielaSelections, adminQuinielaMatches)
+  const adminQuinielaNombreValido = isValidName(adminQuinielaNombre)
+  const adminQuinielaCelularValido = isValidPhone(adminQuinielaCelular)
   const filteredAdminQuinielas = quinielas.filter((quiniela) => {
     const q = adminSearch.toLowerCase()
     const matchSearch = !q || quiniela.nombre.toLowerCase().includes(q) || quiniela.celular.includes(q)
@@ -644,9 +787,158 @@ function App() {
     )
   }
 
+  const clearAdminQuinielaForm = () => {
+    const targetJornadaId = isJornadaOpenBySchedule(jornada) ? jornada?.id ?? null : null
+    const targetMatches = targetJornadaId
+      ? adminMatchSource.filter((match) => match.jornadaId === targetJornadaId || (!match.jornadaId && jornada?.id === targetJornadaId))
+      : []
+
+    setAdminEditQuinielaId(null)
+    setAdminQuinielaJornadaId(targetJornadaId)
+    setAdminQuinielaNombre('')
+    setAdminQuinielaCelular('')
+    setAdminQuinielaModalidad('3 dobles')
+    setAdminQuinielaSelections(createEmptySelections(targetMatches))
+  }
+
+  const closeAdminQuinielaModal = () => {
+    clearAdminQuinielaForm()
+    setShowAdminQuinielaModal(false)
+  }
+
+  const openNewAdminQuiniela = () => {
+    clearAdminQuinielaForm()
+    setShowAdminQuinielaModal(true)
+  }
+
+  const closeTournamentModal = () => {
+    setNewTournamentName('')
+    setNewTournamentLeague('Liga MX')
+    setNewTournamentSeason(LIGA_MX_DEFAULT_SEASON)
+    setShowTournamentModal(false)
+  }
+
+  const closeJornadaModal = () => {
+    setNewJornadaName('')
+    setNewJornadaNumber('')
+    setNewJornadaOpen('')
+    setNewJornadaClose('')
+    setNewJornadaFirstPrize('')
+    setNewJornadaSecondPrize('')
+    setNewJornadaTournamentId(defaultTournament ? String(defaultTournament.id) : '')
+    setShowJornadaModal(false)
+  }
+
+  const handleAdminQuinielaModalidad = (nextModalidad: Modalidad) => {
+    const nextMaxDobles = getMaxDobles(nextModalidad)
+
+    if (adminQuinielaDobles > nextMaxDobles) {
+      window.alert(`Esta quiniela tiene ${adminQuinielaDobles} dobles. La modalidad ${nextModalidad} solo permite ${nextMaxDobles}.`)
+      return
+    }
+
+    setAdminQuinielaModalidad(nextModalidad)
+  }
+
+  const handleAdminQuinielaSelection = (partidoId: number, option: PickOption) => {
+    const result = toggleSelection(adminQuinielaSelections, partidoId, option, adminQuinielaModalidad)
+
+    if (result.blocked) {
+      window.alert(result.blocked)
+      return
+    }
+
+    setAdminQuinielaSelections(result.selecciones)
+  }
+
+  const randomAdminQuiniela = () => {
+    setAdminQuinielaSelections(generateRandomSelections(adminQuinielaModalidad, adminQuinielaMatches))
+  }
+
+  const startEditAdminQuiniela = (quiniela: SavedQuiniela) => {
+    const byMatchId = new Map(quiniela.selecciones.map((selection) => [selection.partidoId, selection]))
+    const editJornadaId = quiniela.jornadaId ?? jornada?.id ?? null
+    const editMatches = editJornadaId
+      ? adminMatchSource.filter((match) => match.jornadaId === editJornadaId || (!match.jornadaId && jornada?.id === editJornadaId))
+      : []
+    setAdminEditQuinielaId(quiniela.id)
+    setAdminQuinielaJornadaId(editJornadaId)
+    setAdminQuinielaNombre(quiniela.nombre)
+    setAdminQuinielaCelular(quiniela.celular)
+    setAdminQuinielaModalidad(quiniela.modalidad)
+    setAdminQuinielaSelections(editMatches.map((match) => {
+      const current = byMatchId.get(match.id)
+      return { partidoId: match.id, seleccion: current ? [...current.seleccion] : [] }
+    }))
+    setAdminTab('quinielas')
+    setShowAdminQuinielaModal(true)
+  }
+
+  const saveAdminQuiniela = async () => {
+    const cleanNombre = adminQuinielaNombre.trim()
+    const cleanCelular = normalizePhone(adminQuinielaCelular)
+
+    if (!isValidName(cleanNombre)) {
+      window.alert('Ingresa el nombre completo de la quiniela.')
+      return
+    }
+
+    if (!isValidPhone(cleanCelular)) {
+      window.alert('Ingresa un celular valido de 10 digitos.')
+      return
+    }
+
+    if (!validateQuinielaCompleta(adminVisibleQuinielaSelections, adminQuinielaMatches)) {
+      window.alert('Completa todos los partidos antes de guardar.')
+      return
+    }
+
+    if (adminQuinielaDobles > adminQuinielaMaxDobles) {
+      window.alert(`La modalidad ${adminQuinielaModalidad} solo permite ${adminQuinielaMaxDobles} dobles.`)
+      return
+    }
+
+    const payload = {
+      jornadaId: adminQuinielaTargetJornadaId ?? undefined,
+      nombre: cleanNombre,
+      celular: cleanCelular,
+      modalidad: adminQuinielaModalidad,
+      costo: adminQuinielaCosto,
+      doblesUsados: adminQuinielaDobles,
+      selecciones: adminVisibleQuinielaSelections.map((selection) => ({ partidoId: selection.partidoId, seleccion: [...selection.seleccion] })),
+      combinaciones: adminQuinielaCombinaciones.map((combination) => [...combination]),
+      fechaRegistro: new Date().toISOString(),
+    }
+
+    setSavingAdminQuiniela(true)
+    try {
+      if (adminEditQuinielaId) {
+        await updateQuinielaDetails(adminEditQuinielaId, payload)
+        setToast({ message: 'Quiniela actualizada.', kind: 'success' })
+      } else {
+        await registerQuiniela(payload, 'accepted')
+        setToast({ message: 'Quiniela creada y aceptada.', kind: 'success' })
+      }
+
+      closeAdminQuinielaModal()
+      await refreshQuinielas()
+    } catch (error) {
+      console.error(error)
+      const message = error instanceof Error ? error.message : 'No se pudo guardar la quiniela.'
+      setToast({ message, kind: 'error' })
+    } finally {
+      setSavingAdminQuiniela(false)
+    }
+  }
+
   const agregarQuiniela = () => {
     const cleanNombre = nombre.trim()
     const cleanCelular = normalizePhone(celular)
+
+    if (!registrosAbiertos) {
+      window.alert('Esta jornada esta cerrada')
+      return
+    }
 
     if (!cleanNombre) {
       window.alert('Por favor ingresa tu nombre.')
@@ -789,6 +1081,124 @@ function App() {
     }
   }
 
+  const fetchLigaMxMatches = async () => {
+    setLoadingLigaMxMatches(true)
+    setLigaMxImportMessage('')
+
+    try {
+      let leagueId = LIGA_MX_LEAGUE_ID
+      const leaguesResponse = await fetch(`https://www.thesportsdb.com/api/v1/json/${SPORTSDB_KEY}/search_all_leagues.php?c=Mexico&s=Soccer`)
+      if (leaguesResponse.ok) {
+        const leaguesPayload = await leaguesResponse.json() as {
+          countries?: Array<{ idLeague?: string; strLeague?: string }> | null
+        }
+        const ligaMx = (leaguesPayload.countries ?? []).find((league) => {
+          const name = (league.strLeague ?? '').toLowerCase()
+          return name.includes('liga mx') || name.includes('mexican primera')
+        })
+        leagueId = ligaMx?.idLeague ?? leagueId
+      }
+
+      const season = ligaMxSeason.trim() || LIGA_MX_DEFAULT_SEASON
+      const response = await fetch(`https://www.thesportsdb.com/api/v1/json/${SPORTSDB_KEY}/eventsseason.php?id=${leagueId}&s=${encodeURIComponent(season)}`)
+      if (!response.ok) {
+        throw new Error(`TheSportsDB respondio con ${response.status}`)
+      }
+
+      const payload = await response.json() as {
+        events?: Array<{
+          idEvent?: string
+          strHomeTeam?: string
+          strAwayTeam?: string
+          dateEvent?: string
+          strTime?: string
+          intRound?: string | null
+          intHomeScore?: string | null
+          intAwayScore?: string | null
+        }> | null
+      }
+      const roundFilter = ligaMxRound.trim()
+      const imported = (payload.events ?? [])
+        .filter((event) => event.strHomeTeam && event.strAwayTeam)
+        .filter((event) => !roundFilter || String(event.intRound ?? '').trim() === roundFilter)
+        .map((event): ImportedMatch => {
+          const { value, timeClass } = getMexicoDateTimeParts(event.dateEvent, event.strTime)
+
+          return {
+            sourceId: event.idEvent ?? `${event.strHomeTeam}-${event.strAwayTeam}-${event.dateEvent ?? ''}`,
+            round: String(event.intRound ?? ''),
+            jornadaId: Number(newMatchJornadaId) || undefined,
+            local: normalizeLigaMxTeamName(event.strHomeTeam ?? ''),
+            visitante: normalizeLigaMxTeamName(event.strAwayTeam ?? ''),
+            time: value,
+            timeClass,
+            localImg: '',
+            visitanteImg: '',
+            localScore: parseScoreInput(event.intHomeScore ?? ''),
+            visitanteScore: parseScoreInput(event.intAwayScore ?? ''),
+          }
+        })
+        .sort((a, b) => a.time.localeCompare(b.time) || a.local.localeCompare(b.local))
+
+      setLigaMxImportMatches(imported)
+      setLigaMxImportMessage(imported.length > 0
+        ? `${imported.length} partidos encontrados de Liga MX ${season}${roundFilter ? `, jornada ${roundFilter}` : ''}.`
+        : `No se encontraron partidos de Liga MX ${season}${roundFilter ? ` para la jornada ${roundFilter}` : ''}.`)
+    } catch (error) {
+      console.error(error)
+      setLigaMxImportMatches([])
+      setLigaMxImportMessage('No se pudieron cargar los partidos de Liga MX.')
+    } finally {
+      setLoadingLigaMxMatches(false)
+    }
+  }
+
+  const saveLigaMxImportMatches = async () => {
+    const selectedJornadaId = Number(newMatchJornadaId)
+
+    if (!selectedJornadaId || !openJornadas.some((item) => item.id === selectedJornadaId)) {
+      setToast({ message: 'Selecciona una jornada abierta.', kind: 'error' })
+      return
+    }
+
+    if (ligaMxImportMatches.length === 0) {
+      setToast({ message: 'Primero carga partidos de Liga MX.', kind: 'error' })
+      return
+    }
+
+    const existingKeys = new Set(
+      adminMatchSource
+        .filter((match) => match.jornadaId === selectedJornadaId)
+        .map((match) => `${match.local.trim().toLowerCase()}|${match.visitante.trim().toLowerCase()}|${match.time}`),
+    )
+    const matchesToSave = ligaMxImportMatches.filter((match) => {
+      const key = `${match.local.trim().toLowerCase()}|${match.visitante.trim().toLowerCase()}|${match.time}`
+      return !existingKeys.has(key)
+    })
+
+    if (matchesToSave.length === 0) {
+      setToast({ message: 'Los partidos cargados ya existen en esta jornada.', kind: 'info' })
+      return
+    }
+
+    setSavingLigaMxMatches(true)
+    try {
+      for (const match of matchesToSave) {
+        await insertMatch({ ...match, jornadaId: selectedJornadaId }, selectedJornadaId)
+      }
+
+      await refreshQuinielas()
+      setLigaMxImportMatches([])
+      setLigaMxImportMessage('')
+      setToast({ message: `${matchesToSave.length} partidos de Liga MX guardados.`, kind: 'success' })
+    } catch (error) {
+      console.error(error)
+      setToast({ message: 'No se pudieron guardar los partidos importados.', kind: 'error' })
+    } finally {
+      setSavingLigaMxMatches(false)
+    }
+  }
+
   const openConfirm = (type: 'accept' | 'cancel' | 'delete', id: number) => {
     setConfirmAction({ type, id })
   }
@@ -878,6 +1288,11 @@ function App() {
   }
 
   const sendWhatsApp = async () => {
+    if (!registrosAbiertos) {
+      window.alert('Esta jornada esta cerrada')
+      return
+    }
+
     if (draftQuinielas.length === 0 || sending) {
       window.alert('Agrega al menos una quiniela antes de enviar.')
       return
@@ -1018,9 +1433,11 @@ function App() {
               {registroMatches.map((match) => {
                 const selection = quiniela.selecciones.find((item) => item.partidoId === match.id)
                 const picks = selection?.seleccion ?? []
+                const outcome = getMatchOutcome(match.localScore ?? null, match.visitanteScore ?? null)
+                const pickCellState = outcome && picks.includes(outcome) ? 'hit' : picks.length > 0 ? 'miss' : 'empty'
 
                 return (
-                  <td key={`${quiniela.id}-${match.id}`}>
+                  <td className={`registro-pick-cell ${pickCellState}`} key={`${quiniela.id}-${match.id}`}>
                     <span className={`registro-pick ${picks.length >= 2 ? 'multi' : picks[0] || 'empty'}`}>
                       {selection ? formatSelection(selection) : '—'}
                     </span>
@@ -1034,7 +1451,7 @@ function App() {
                   </span>
                 </td>
               ) : null}
-              <td>
+              <td className="registro-points-cell">
                 <strong>{countQuinielaPoints(quiniela, registroMatches)}</strong>
               </td>
             </tr>
@@ -1090,19 +1507,61 @@ function App() {
     URL.revokeObjectURL(link.href)
   }
 
+  const handleCreateTournament = async () => {
+    if (newTournamentName.trim().length < 2) {
+      setToast({ message: 'Ingresa un nombre de torneo.', kind: 'error' })
+      return
+    }
+
+    try {
+      await createTournament({
+        nombre: newTournamentName.trim(),
+        liga: newTournamentLeague.trim() || 'Liga MX',
+        temporada: newTournamentSeason.trim() || LIGA_MX_DEFAULT_SEASON,
+        status: 'active',
+      })
+      setNewTournamentName('')
+      setNewTournamentLeague('Liga MX')
+      setNewTournamentSeason(LIGA_MX_DEFAULT_SEASON)
+      setShowTournamentModal(false)
+      await refreshQuinielas()
+      setToast({ message: 'Torneo creado.', kind: 'success' })
+    } catch (error) {
+      console.error(error)
+      setToast({ message: 'No se pudo crear el torneo.', kind: 'error' })
+    }
+  }
+
+  const handleTournamentStatus = async (item: Tournament, status: TournamentStatus) => {
+    try {
+      await updateTournament(item.id, { status })
+      await refreshQuinielas()
+      setToast({ message: 'Estado de torneo actualizado.', kind: 'success' })
+    } catch (error) {
+      console.error(error)
+      setToast({ message: 'No se pudo actualizar el torneo.', kind: 'error' })
+    }
+  }
+
   const handleCreateJornada = async () => {
     if (newJornadaName.trim().length < 2) return
     try {
       await createJornada({
+        tournamentId: newJornadaTournamentId ? Number(newJornadaTournamentId) : null,
         nombre: newJornadaName.trim(),
+        numero: newJornadaNumber ? Number(newJornadaNumber) : null,
+        openAt: newJornadaOpen ? new Date(newJornadaOpen).toISOString() : null,
         closeAt: newJornadaClose ? new Date(newJornadaClose).toISOString() : null,
         firstPrize: Number(newJornadaFirstPrize || 0),
         secondPrize: Number(newJornadaSecondPrize || 0),
       })
       setNewJornadaName('')
+      setNewJornadaNumber('')
+      setNewJornadaOpen('')
       setNewJornadaClose('')
       setNewJornadaFirstPrize('')
       setNewJornadaSecondPrize('')
+      setShowJornadaModal(false)
       await refreshQuinielas()
       setToast({ message: 'Jornada creada.', kind: 'success' })
     } catch (error) {
@@ -1136,6 +1595,9 @@ function App() {
   const startEditJornada = (item: Jornada) => {
     setEditingJornadaId(item.id)
     setEditJornadaName(item.nombre)
+    setEditJornadaTournamentId(item.tournamentId ? String(item.tournamentId) : '')
+    setEditJornadaNumber(item.numero ? String(item.numero) : '')
+    setEditJornadaOpen(formatDatetimeLocal(item.openAt))
     setEditJornadaClose(formatDatetimeLocal(item.closeAt))
     setEditJornadaFirstPrize(String(item.firstPrize))
     setEditJornadaSecondPrize(String(item.secondPrize))
@@ -1145,6 +1607,9 @@ function App() {
   const cancelEditJornada = () => {
     setEditingJornadaId(null)
     setEditJornadaName('')
+    setEditJornadaTournamentId('')
+    setEditJornadaNumber('')
+    setEditJornadaOpen('')
     setEditJornadaClose('')
     setEditJornadaFirstPrize('')
     setEditJornadaSecondPrize('')
@@ -1159,7 +1624,10 @@ function App() {
 
     try {
       await updateJornada(id, {
+        tournamentId: editJornadaTournamentId ? Number(editJornadaTournamentId) : null,
         nombre: editJornadaName.trim(),
+        numero: editJornadaNumber ? Number(editJornadaNumber) : null,
+        openAt: editJornadaOpen ? new Date(editJornadaOpen).toISOString() : null,
         closeAt: editJornadaClose ? new Date(editJornadaClose).toISOString() : null,
         firstPrize: Number(editJornadaFirstPrize || 0),
         secondPrize: Number(editJornadaSecondPrize || 0),
@@ -1250,36 +1718,39 @@ function App() {
       await refreshQuinielas()
       setToast({ message: 'Partido eliminado.', kind: 'info' })
     } catch (err) {
-      console.error(err)
       setMatches(previousMatches)
       setAdminMatches(previousAdminMatches)
-      setToast({ message: 'No se pudo eliminar el partido de la base de datos.', kind: 'error' })
+      const message = err instanceof Error ? err.message : 'No se pudo eliminar el partido de la base de datos.'
+      if (!message.startsWith('No se puede eliminar este partido')) {
+        console.error(err)
+      }
+      setToast({ message, kind: 'error' })
     }
   }
 
   return (
     <div className={`app-shell${navOpen ? ' nav-open' : ''}`}>
       <button className="nav-toggle" onClick={() => setNavOpen((current) => !current)} type="button" aria-expanded={navOpen} aria-label="Abrir o cerrar menu">
-        ☰
+        Menu
       </button>
       <div className={`nav-backdrop${navOpen ? ' visible' : ''}`} onClick={() => setNavOpen(false)} />
 
       <nav className={`topnav${navOpen ? ' open' : ''}`}>
         <button className="nav-close" onClick={() => setNavOpen(false)} type="button" aria-label="Cerrar menu">
-          ×
+          Cerrar
         </button>
         <div className="topnav-links">
           <button className={`nav-link-btn${activeView === 'home' ? ' active' : ''}`} onClick={() => openView('home')} type="button">
-            🏠 Inicio
+            Inicio
           </button>
           <button className={`nav-link-btn${activeView === 'registro' ? ' active' : ''}`} onClick={() => openView('registro')} type="button">
-            📋 Registro al momento/Verificador
+            Registro al momento/Verificador
           </button>
           <button className={`nav-link-btn${activeView === 'resultados' ? ' active' : ''}`} onClick={() => openView('resultados')} type="button">
-            🏆 Resultados de la Jornada
+            Resultados de la Jornada
           </button>
           <button className={`nav-link-btn${activeView === 'admin' ? ' active' : ''}`} onClick={() => openView('admin')} type="button">
-            🔐 Admin
+            Admin
           </button>
           <button className="nav-link-btn hidden-nav-link" type="button" hidden>
           </button>
@@ -1291,7 +1762,7 @@ function App() {
             f
           </button>
           <button className="social-btn" title="WhatsApp" onClick={() => setNavOpen(false)} type="button">
-            💬
+            WA
           </button>
         </div>
       </nav>
@@ -1302,7 +1773,7 @@ function App() {
             <div className="hero-inner">
               <div className="hero-prize">
                 <div className="label">🏆 Acumulado</div>
-                <div className="amount">${publicStats.pool.toFixed(2)}</div>
+                <div className="amount">${publicPoolVisible.toFixed(2)}</div>
               </div>
               <div className="hero-center">
                 <img src="/logo.png" className="hero-logo" alt="Pronosticos Entre Cuates" onError={(event) => { event.currentTarget.style.display = 'none' }} />
@@ -1332,7 +1803,9 @@ function App() {
 
           {dataLoading ? <div className="app-notice">Cargando datos de la jornada...</div> : null}
           {dataError ? <div className="app-notice error">{dataError}</div> : null}
-          {!registrosAbiertos ? <div className="app-notice error">Los registros de esta jornada estan cerrados.</div> : null}
+          {jornadaPendientePorFecha ? <div className="app-notice">Esta jornada abre el {new Date(jornada!.openAt!).toLocaleString('es-MX')}</div> : null}
+          {jornadaCerradaPorFecha ? <div className="app-notice error">Esta jornada esta cerrada</div> : null}
+          {!jornadaPendientePorFecha && !jornadaCerradaPorFecha && !registrosAbiertos ? <div className="app-notice error">Los registros de esta jornada estan cerrados.</div> : null}
 
           <main className="main-container">
             <div className="left-column">
@@ -1377,6 +1850,7 @@ function App() {
                             return (
                               <button
                                 className={`lev-btn ${isActive ? `active-${option}` : ''}`}
+                                disabled={!registrosAbiertos}
                                 key={option}
                                 onClick={() => handleSelection(match.id, option)}
                                 type="button"
@@ -1404,6 +1878,7 @@ function App() {
                     {MODALIDADES.map((option) => (
                       <button
                         className={`mode-option${modalidad === option ? ' active' : ''}`}
+                        disabled={!registrosAbiertos}
                         key={option}
                         onClick={() => handleModalidadChange(option)}
                         type="button"
@@ -1470,19 +1945,19 @@ function App() {
               </div>
 
               <div className="actions">
-                <button className="btn btn-clear" id="clear-btn" onClick={limpiar} type="button">
+                <button className="btn btn-clear" id="clear-btn" onClick={limpiar} type="button" disabled={!registrosAbiertos}>
                   Limpiar
                 </button>
                 <button className="btn btn-add" id="add-btn" onClick={agregarQuiniela} type="button" disabled={!puedeAgregar}>
                   Agregar quiniela
                 </button>
-                <button className="btn btn-random" id="random-btn" onClick={aleatorio} type="button">
+                <button className="btn btn-random" id="random-btn" onClick={aleatorio} type="button" disabled={!registrosAbiertos}>
                   Aleatorio
                 </button>
               </div>
 
-              <button className="btn-send" id="send-btn" onClick={sendWhatsApp} type="button" disabled={sending}>
-                {sending ? 'Registrando quinielas...' : 'Enviar por WhatsApp'}
+              <button className={`btn-send${!registrosAbiertos ? ' blocked' : ''}`} id="send-btn" onClick={sendWhatsApp} type="button" disabled={sending || !registrosAbiertos}>
+                {sending ? 'Registrando quinielas...' : registrosAbiertos ? 'Enviar por WhatsApp' : 'Jornada bloqueada'}
               </button>
 
               <div className="quinielas-list">
@@ -1544,11 +2019,19 @@ function App() {
               </article>
               <article>
                 <span>Total acumulado</span>
-                <strong>${registroTotalAcumulado.toFixed(2)}</strong>
+                <strong>${registroTotalAcumuladoVisible.toFixed(2)}</strong>
               </article>
               <article>
                 <span>Partidos</span>
                 <strong>{matches.length}</strong>
+              </article>
+              <article>
+                <span>Personas en primer lugar</span>
+                <strong>{registroFirstPlaceCount}</strong>
+              </article>
+              <article>
+                <span>Personas con 0 aciertos</span>
+                <strong>{registroZeroPointsCount}</strong>
               </article>
             </div>
           </section>
@@ -1564,10 +2047,25 @@ function App() {
               </button>
             </div>
 
+            <div className="ranking-filters" aria-label="Filtros de quinielas registradas">
+              <select className="filter-select" value={rankingModalFilter} onChange={(event) => setRankingModalFilter(event.target.value as 'all' | Modalidad)}>
+                <option value="all">Todas las modalidades</option>
+                {MODALIDADES.map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+              <select className="filter-select" value={rankingSortOrder} onChange={(event) => setRankingSortOrder(event.target.value as 'desc' | 'asc')}>
+                <option value="desc">Mayor puntaje</option>
+                <option value="asc">Menor puntaje</option>
+              </select>
+            </div>
+
             {registroQuinielas.length === 0 ? (
               <div className="registro-empty">{openJornadaId ? 'Todavia no hay quinielas aprobadas para esta jornada.' : 'No hay una jornada abierta en este momento.'}</div>
+            ) : registroRankingRows.length === 0 ? (
+              <div className="registro-empty">No hay quinielas que coincidan con los filtros.</div>
             ) : (
-              renderRegistroTable(registroQuinielas)
+              renderRegistroTable(registroRankingRows)
             )}
           </section>
 
@@ -1577,7 +2075,7 @@ function App() {
           <section className="resultados-hero">
             <div className="resultados-kicker">Resultados de la jornada</div>
             <h1>Resultados de la Jornada</h1>
-            <p>Consulta marcadores oficiales, estado de partidos y tabla general de participantes para la jornada actual.</p>
+            <p>Consulta marcadores oficiales, estado de partidos y resultado de la jornada actual.</p>
             <div className="resultados-stats">
               <article>
                 <span>Partidos</span>
@@ -1589,7 +2087,7 @@ function App() {
               </article>
               <article>
                 <span>Bolsa aceptada</span>
-                <strong>${registroTotalAcumulado.toFixed(2)}</strong>
+                <strong>${registroTotalAcumuladoVisible.toFixed(2)}</strong>
               </article>
             </div>
           </section>
@@ -1641,85 +2139,6 @@ function App() {
                 </tbody>
               </table>
             </div>
-          </section>
-
-          <section className="resultados-card">
-            <div className="resultados-card-head">
-              <div>
-                <h2>Tabla General {jornadaTitle}</h2>
-                <p>Ranking de participantes ordenado por puntos y aciertos.</p>
-              </div>
-              <div className="results-subtitle">Solo quinielas aceptadas</div>
-            </div>
-
-            <div className="ranking-filters" aria-label="Filtros de ranking">
-              <select className="filter-select" value={rankingModalFilter} onChange={(event) => setRankingModalFilter(event.target.value as 'all' | Modalidad)}>
-                <option value="all">Todas las modalidades</option>
-                {MODALIDADES.map((option) => (
-                  <option key={option} value={option}>{option}</option>
-                ))}
-              </select>
-              <select className="filter-select" value={rankingSortOrder} onChange={(event) => setRankingSortOrder(event.target.value as 'desc' | 'asc')}>
-                <option value="desc">Mayor puntaje</option>
-                <option value="asc">Menor puntaje</option>
-              </select>
-            </div>
-
-            {publicApprovedQuinielas.length === 0 ? (
-              <div className="registro-empty">Aún no hay quinielas aceptadas para construir el ranking.</div>
-            ) : rankingRows.length === 0 ? (
-              <div className="registro-empty">No hay quinielas que coincidan con los filtros.</div>
-            ) : (
-              <div className="registro-table-wrap">
-                <table className="registro-table ranking-table">
-                  <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>Nombre</th>
-                      {matches.map((match) => (
-                        <th key={match.id}>
-                          <span className="registro-team-label">
-                            <span className="registro-team-line">
-                              {renderTeamLogo(match.local, '⚽', 'registro-team-logo')}
-                              <span>{match.local}</span>
-                            </span>
-                            <small>vs</small>
-                            <span className="registro-team-line away">
-                              <span>{match.visitante}</span>
-                              {renderTeamLogo(match.visitante, '⚽', 'registro-team-logo')}
-                            </span>
-                          </span>
-                        </th>
-                      ))}
-                      <th>Puntos</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rankingRows.map(({ quiniela, puntos }) => (
-                      <tr key={quiniela.id}>
-                        <td>{quiniela.folio ?? quiniela.id}</td>
-                        <td>{quiniela.nombre}</td>
-                        {matches.map((match) => {
-                          const selection = quiniela.selecciones.find((item) => item.partidoId === match.id)
-                          const picks = selection?.seleccion ?? []
-
-                          return (
-                            <td key={`${quiniela.id}-${match.id}`}>
-                              <span className={`registro-pick ${picks.length >= 2 ? 'multi' : picks[0] || 'empty'}`}>
-                                {selection ? formatSelection(selection) : '-'}
-                              </span>
-                            </td>
-                          )
-                        })}
-                        <td>
-                          <strong>{puntos}</strong>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
           </section>
         </main>
       ) : (
@@ -1779,7 +2198,7 @@ function App() {
                     <div className="stat-icon">💰</div>
                     <div>
                       <div className="stat-label">Total acumulado</div>
-                      <div className="stat-val green">${adminAcceptedTotal.toLocaleString()}</div>
+                      <div className="stat-val green">${adminAcceptedTotalVisible.toLocaleString()}</div>
                     </div>
                   </div>
                 </div>
@@ -1789,7 +2208,10 @@ function App() {
                     <div className="section-card">
                       <div className="section-head">
                         <h2>📋 Quinielas registradas</h2>
-                        <span className="badge-count">{filteredAdminQuinielas.length} registro{filteredAdminQuinielas.length !== 1 ? 's' : ''}</span>
+                        <div className="section-head-actions">
+                          <span className="badge-count">{filteredAdminQuinielas.length} registro{filteredAdminQuinielas.length !== 1 ? 's' : ''}</span>
+                          <button className="act-btn save" onClick={openNewAdminQuiniela} type="button">Agregar Quiniela</button>
+                        </div>
                       </div>
                       <div className="section-body">
                         <div className="filter-bar">
@@ -1900,6 +2322,9 @@ function App() {
                                             ❌ Rechazar
                                           </button>
                                         ) : null}
+                                        <button className="act-btn icon-action" onClick={() => startEditAdminQuiniela(quiniela)} type="button" title="Editar quiniela" aria-label={`Editar quiniela ${quiniela.folio ?? quiniela.id}`}>
+                                          ✏
+                                        </button>
                                         <button className="act-btn delete" onClick={() => openConfirm('delete', quiniela.id)} type="button">
                                           🗑
                                         </button>
@@ -2091,7 +2516,7 @@ function App() {
                           <div className="register-panel">
                             <div className="rp-card">
                               <div className="rp-field">
-                                <div className="rp-label">Jornada abierta</div>
+                                <div className="rp-label">Jornada destino</div>
                                 <select
                                   className="rp-input"
                                   disabled={openJornadas.length === 0}
@@ -2099,7 +2524,7 @@ function App() {
                                   onChange={(event) => setNewMatchJornadaId(event.target.value)}
                                 >
                                   {openJornadas.length === 0 ? (
-                                    <option value="">No hay jornadas abiertas</option>
+                                    <option value="">No hay jornadas disponibles</option>
                                   ) : null}
                                   {openJornadas.map((item) => (
                                     <option key={item.id} value={item.id}>
@@ -2107,6 +2532,39 @@ function App() {
                                     </option>
                                   ))}
                                 </select>
+                              </div>
+                              <div className="liga-import-panel">
+                                <div className="rp-title">Liga MX automatica</div>
+                                <div className="mode-hint">Carga partidos de la temporada desde TheSportsDB y guardalos en la jornada seleccionada.</div>
+                                <div className="liga-import-fields">
+                                  <div>
+                                    <div className="rp-label">Temporada</div>
+                                    <input className="rp-input" value={ligaMxSeason} onChange={(event) => setLigaMxSeason(event.target.value)} placeholder="2026-2027" />
+                                  </div>
+                                  <div>
+                                    <div className="rp-label">Jornada Liga MX</div>
+                                    <input className="rp-input" inputMode="numeric" value={ligaMxRound} onChange={(event) => setLigaMxRound(event.target.value.replace(/\D/g, ''))} placeholder="Todas" />
+                                  </div>
+                                </div>
+                                <div className="liga-import-actions">
+                                  <button className="ca-btn" onClick={fetchLigaMxMatches} type="button" disabled={loadingLigaMxMatches}>
+                                    {loadingLigaMxMatches ? 'Cargando...' : 'Cargar temporada'}
+                                  </button>
+                                  <button className="ca-btn save" onClick={saveLigaMxImportMatches} type="button" disabled={savingLigaMxMatches || ligaMxImportMatches.length === 0}>
+                                    {savingLigaMxMatches ? 'Guardando...' : 'Guardar en jornada'}
+                                  </button>
+                                </div>
+                                {ligaMxImportMessage ? <div className="liga-import-message">{ligaMxImportMessage}</div> : null}
+                                {ligaMxImportMatches.length > 0 ? (
+                                  <div className="liga-import-preview">
+                                    {ligaMxImportMatches.map((match) => (
+                                      <div className="liga-import-item" key={match.sourceId}>
+                                        <strong>{match.local} vs {match.visitante}</strong>
+                                        <span>{match.round ? `J${match.round} · ` : ''}{formatMatchTime(match.time)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : null}
                               </div>
                               <div className="rp-title">➕ Agregar partido</div>
                               <div className="rp-field">
@@ -2183,14 +2641,31 @@ function App() {
                     <div className="section-card">
                       <div className="section-head">
                         <h2>Jornadas, cierre y premios</h2>
+                        <div className="section-head-actions">
+                          <button className="ca-btn save" onClick={() => setShowTournamentModal(true)} type="button">Agregar Torneo</button>
+                          <button className="ca-btn save" onClick={() => setShowJornadaModal(true)} type="button">Agregar Jornada</button>
+                        </div>
                       </div>
                       <div className="section-body">
-                        <div className="jornada-create">
-                          <input className="rp-input" placeholder="Nombre de la jornada" value={newJornadaName} onChange={(event) => setNewJornadaName(event.target.value)} />
-                          <input className="rp-input" type="datetime-local" value={newJornadaClose} onChange={(event) => setNewJornadaClose(event.target.value)} />
-                          <input className="rp-input" min={0} placeholder="Primer premio" type="number" value={newJornadaFirstPrize} onChange={(event) => setNewJornadaFirstPrize(event.target.value)} />
-                          <input className="rp-input" min={0} placeholder="Segundo premio" type="number" value={newJornadaSecondPrize} onChange={(event) => setNewJornadaSecondPrize(event.target.value)} />
-                          <button className="ca-btn save" onClick={handleCreateJornada} type="button">Crear jornada</button>
+                        <div className="tournament-panel">
+                          <div className="jornada-match-preview-title">Torneos</div>
+                          <div className="tournament-list">
+                            {tournaments.length === 0 ? (
+                              <div className="jornada-match-empty">Todavia no hay torneos.</div>
+                            ) : tournaments.map((item) => (
+                              <div className="tournament-item" key={item.id}>
+                                <div>
+                                  <strong>{item.nombre}</strong>
+                                  <span>{item.liga} - {item.temporada}</span>
+                                </div>
+                                <div className="acts-cell">
+                                  <span className={`status-badge ${item.status}`}>{item.status}</span>
+                                  {item.status !== 'active' ? <button className="act-btn" onClick={() => handleTournamentStatus(item, 'active')} type="button">Activar</button> : null}
+                                  {item.status !== 'finished' ? <button className="act-btn accept" onClick={() => handleTournamentStatus(item, 'finished')} type="button">Finalizar</button> : null}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                         <div className="jornada-list">
                           {jornadas.map((item) => (
@@ -2198,11 +2673,43 @@ function App() {
                               {editingJornadaId === item.id ? (
                                 <>
                                   <div className="jornada-edit-grid">
-                                    <input className="rp-input" placeholder="Nombre" value={editJornadaName} onChange={(event) => setEditJornadaName(event.target.value)} />
-                                    <input className="rp-input" type="datetime-local" value={editJornadaClose} onChange={(event) => setEditJornadaClose(event.target.value)} />
-                                    <input className="rp-input" min={0} placeholder="Primer premio" type="number" value={editJornadaFirstPrize} onChange={(event) => setEditJornadaFirstPrize(event.target.value)} />
-                                    <input className="rp-input" min={0} placeholder="Segundo premio" type="number" value={editJornadaSecondPrize} onChange={(event) => setEditJornadaSecondPrize(event.target.value)} />
-                                    <textarea className="rp-input jornada-notes-input" placeholder="Notas" value={editJornadaNotes} onChange={(event) => setEditJornadaNotes(event.target.value)} />
+                                    <label className="jornada-field">
+                                      <span>Torneo</span>
+                                      <select className="rp-input" value={editJornadaTournamentId} onChange={(event) => setEditJornadaTournamentId(event.target.value)}>
+                                        <option value="">Sin torneo</option>
+                                        {tournaments.map((tournament) => (
+                                          <option key={tournament.id} value={tournament.id}>{tournament.nombre}</option>
+                                        ))}
+                                      </select>
+                                    </label>
+                                    <label className="jornada-field">
+                                      <span>Numero</span>
+                                      <input className="rp-input" min={1} placeholder="1" type="number" value={editJornadaNumber} onChange={(event) => setEditJornadaNumber(event.target.value)} />
+                                    </label>
+                                    <label className="jornada-field">
+                                      <span>Nombre</span>
+                                      <input className="rp-input" placeholder="Nombre" value={editJornadaName} onChange={(event) => setEditJornadaName(event.target.value)} />
+                                    </label>
+                                    <label className="jornada-field">
+                                      <span>Apertura</span>
+                                      <input className="rp-input" type="datetime-local" value={editJornadaOpen} onChange={(event) => setEditJornadaOpen(event.target.value)} />
+                                    </label>
+                                    <label className="jornada-field">
+                                      <span>Cierre</span>
+                                      <input className="rp-input" type="datetime-local" value={editJornadaClose} onChange={(event) => setEditJornadaClose(event.target.value)} />
+                                    </label>
+                                    <label className="jornada-field">
+                                      <span>Primer premio</span>
+                                      <input className="rp-input" min={0} placeholder="Primer premio" type="number" value={editJornadaFirstPrize} onChange={(event) => setEditJornadaFirstPrize(event.target.value)} />
+                                    </label>
+                                    <label className="jornada-field">
+                                      <span>Segundo premio</span>
+                                      <input className="rp-input" min={0} placeholder="Segundo premio" type="number" value={editJornadaSecondPrize} onChange={(event) => setEditJornadaSecondPrize(event.target.value)} />
+                                    </label>
+                                    <label className="jornada-field jornada-notes-input">
+                                      <span>Notas</span>
+                                      <textarea className="rp-input" placeholder="Notas" value={editJornadaNotes} onChange={(event) => setEditJornadaNotes(event.target.value)} />
+                                    </label>
                                     <div className="jornada-match-preview">
                                       <div className="jornada-match-preview-title">Partidos en esta jornada</div>
                                       {getJornadaMatches(item.id).length === 0 ? (
@@ -2229,7 +2736,9 @@ function App() {
                               ) : (
                                 <>
                                   <div>
-                                    <strong>{item.nombre}</strong>
+                                    <strong>{item.numero ? `Jornada ${item.numero}: ${item.nombre}` : item.nombre}</strong>
+                                    <span>Torneo: {tournaments.find((tournament) => tournament.id === item.tournamentId)?.nombre ?? 'Sin torneo'}</span>
+                                    <span>Apertura: {item.openAt ? new Date(item.openAt).toLocaleString('es-MX') : 'Manual'}</span>
                                     <span>{item.closeAt ? new Date(item.closeAt).toLocaleString('es-MX') : 'Sin cierre programado'}</span>
                                     <span>Premios: ${item.firstPrize} / ${item.secondPrize}</span>
                                   </div>
@@ -2297,6 +2806,186 @@ function App() {
               </div>
             </div>
           )}
+
+          {showTournamentModal && adminAuthenticated ? (
+            <div className="modal-overlay show">
+              <div className="modal-card admin-form-modal">
+                <div className="admin-quiniela-editor">
+                  <div className="admin-quiniela-editor-head">
+                    <div>
+                      <h3>Agregar Torneo</h3>
+                      <p>Crea el contenedor principal para agrupar jornadas.</p>
+                    </div>
+                    <button className="modal-close-btn" onClick={closeTournamentModal} type="button" aria-label="Cerrar modal">×</button>
+                  </div>
+                  <div className="modal-form-grid">
+                    <label className="jornada-field">
+                      <span>Nombre del torneo</span>
+                      <input className="rp-input" placeholder="Apertura 2026" value={newTournamentName} onChange={(event) => setNewTournamentName(event.target.value)} />
+                    </label>
+                    <label className="jornada-field">
+                      <span>Liga</span>
+                      <input className="rp-input" placeholder="Liga MX" value={newTournamentLeague} onChange={(event) => setNewTournamentLeague(event.target.value)} />
+                    </label>
+                    <label className="jornada-field">
+                      <span>Temporada</span>
+                      <input className="rp-input" placeholder="2026-2027" value={newTournamentSeason} onChange={(event) => setNewTournamentSeason(event.target.value)} />
+                    </label>
+                  </div>
+                  <div className="admin-quiniela-actions">
+                    <button className="act-btn cancel" onClick={closeTournamentModal} type="button">Cancelar</button>
+                    <button className="act-btn save" onClick={handleCreateTournament} type="button">Crear torneo</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {showJornadaModal && adminAuthenticated ? (
+            <div className="modal-overlay show">
+              <div className="modal-card admin-form-modal jornada-form-modal">
+                <div className="admin-quiniela-editor">
+                  <div className="admin-quiniela-editor-head">
+                    <div>
+                      <h3>Agregar Jornada</h3>
+                      <p>Configura apertura, cierre y premios para esta jornada.</p>
+                    </div>
+                    <button className="modal-close-btn" onClick={closeJornadaModal} type="button" aria-label="Cerrar modal">×</button>
+                  </div>
+                  <div className="modal-form-grid jornada-modal-grid">
+                    <label className="jornada-field">
+                      <span>Torneo</span>
+                      <select className="rp-input" value={newJornadaTournamentId} onChange={(event) => setNewJornadaTournamentId(event.target.value)}>
+                        <option value="">Sin torneo</option>
+                        {activeTournaments.map((item) => (
+                          <option key={item.id} value={item.id}>{item.nombre}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="jornada-field">
+                      <span>Numero</span>
+                      <input className="rp-input" min={1} placeholder="1" type="number" value={newJornadaNumber} onChange={(event) => setNewJornadaNumber(event.target.value)} />
+                    </label>
+                    <label className="jornada-field">
+                      <span>Nombre</span>
+                      <input className="rp-input" placeholder="Nombre de la jornada" value={newJornadaName} onChange={(event) => setNewJornadaName(event.target.value)} />
+                    </label>
+                    <label className="jornada-field">
+                      <span>Apertura</span>
+                      <input className="rp-input" type="datetime-local" value={newJornadaOpen} onChange={(event) => setNewJornadaOpen(event.target.value)} />
+                    </label>
+                    <label className="jornada-field">
+                      <span>Cierre</span>
+                      <input className="rp-input" type="datetime-local" value={newJornadaClose} onChange={(event) => setNewJornadaClose(event.target.value)} />
+                    </label>
+                    <label className="jornada-field">
+                      <span>Primer premio</span>
+                      <input className="rp-input" min={0} placeholder="Primer premio" type="number" value={newJornadaFirstPrize} onChange={(event) => setNewJornadaFirstPrize(event.target.value)} />
+                    </label>
+                    <label className="jornada-field">
+                      <span>Segundo premio</span>
+                      <input className="rp-input" min={0} placeholder="Segundo premio" type="number" value={newJornadaSecondPrize} onChange={(event) => setNewJornadaSecondPrize(event.target.value)} />
+                    </label>
+                  </div>
+                  <div className="admin-quiniela-actions">
+                    <button className="act-btn cancel" onClick={closeJornadaModal} type="button">Cancelar</button>
+                    <button className="act-btn save" onClick={handleCreateJornada} type="button">Crear jornada</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {showAdminQuinielaModal && adminAuthenticated ? (
+            <div className="modal-overlay show">
+              <div className="modal-card admin-quiniela-modal">
+                <div className="admin-quiniela-editor">
+                  <div className="admin-quiniela-editor-head">
+                    <div>
+                      <h3>{adminEditQuinielaId ? 'Editar quiniela' : 'Agregar Quiniela'}</h3>
+                      <p>{adminEditQuinielaId ? `Modificando quiniela #${adminEditQuinielaId}` : 'Crea una quiniela aceptada desde el panel de admin.'}</p>
+                    </div>
+                    <button className="modal-close-btn" onClick={closeAdminQuinielaModal} type="button" aria-label="Cerrar modal">×</button>
+                  </div>
+                  <div className="admin-quiniela-grid">
+                    <div className="admin-quiniela-field">
+                      <label>Nombre</label>
+                      <input className="rp-input" placeholder="Nombre completo" value={adminQuinielaNombre} onChange={(event) => setAdminQuinielaNombre(event.target.value)} />
+                    </div>
+                    <div className="admin-quiniela-field">
+                      <label>Celular</label>
+                      <input className="rp-input" inputMode="tel" maxLength={10} placeholder="10 digitos" value={adminQuinielaCelular} onChange={(event) => setAdminQuinielaCelular(normalizePhone(event.target.value))} />
+                    </div>
+                    <div className="admin-quiniela-field">
+                      <label>Modalidad</label>
+                      <div className="admin-mode-options">
+                        {MODALIDADES.map((option) => (
+                          <button className={`mode-option${adminQuinielaModalidad === option ? ' active' : ''}`} key={option} onClick={() => handleAdminQuinielaModalidad(option)} type="button">
+                            <span>{option}</span>
+                            <strong>${getCosto(option)}</strong>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="admin-quiniela-summary">
+                    <span>Costo: <strong>${adminQuinielaCosto}</strong></span>
+                    <span>Dobles: <strong>{adminQuinielaDobles}/{adminQuinielaMaxDobles}</strong></span>
+                    <span>Combinaciones: <strong>{adminQuinielaCombinaciones.length}</strong></span>
+                    <span>Partidos: <strong>{adminVisibleQuinielaSelections.filter((selection) => selection.seleccion.length > 0).length}/{adminQuinielaMatches.length}</strong></span>
+                  </div>
+                  <div className="admin-quiniela-matches">
+                    {adminQuinielaMatches.length === 0 ? (
+                      <div className="jornada-match-empty">Esta jornada todavia no tiene partidos.</div>
+                    ) : adminQuinielaMatches.map((match) => {
+                      const currentSelection = adminQuinielaSelections.find((selection) => selection.partidoId === match.id)?.seleccion ?? []
+
+                      return (
+                        <div className="admin-quiniela-match" key={match.id}>
+                          <div className="admin-quiniela-match-name">
+                            <div className="admin-quiniela-team">
+                              {renderTeamLogo(match.local, '⚽', 'admin-quiniela-logo')}
+                              <strong>{match.local}</strong>
+                            </div>
+                            <span>vs</span>
+                            <div className="admin-quiniela-team away">
+                              <strong>{match.visitante}</strong>
+                              {renderTeamLogo(match.visitante, '⚽', 'admin-quiniela-logo')}
+                            </div>
+                          </div>
+                          <div className="lev-group">
+                            {(['L', 'E', 'V'] as PickOption[]).map((option) => (
+                              <button
+                                className={`lev-btn ${currentSelection.includes(option) ? `active-${option}` : ''}`}
+                                key={option}
+                                onClick={() => handleAdminQuinielaSelection(match.id, option)}
+                                type="button"
+                              >
+                                {option}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div className="admin-quiniela-actions">
+                    <button className="act-btn" onClick={randomAdminQuiniela} type="button">Aleatorio</button>
+                    <button className="act-btn delete" onClick={clearAdminQuinielaForm} type="button">Limpiar</button>
+                    <button className="act-btn cancel" onClick={closeAdminQuinielaModal} type="button">Cancelar</button>
+                    <button
+                      className="act-btn save"
+                      disabled={savingAdminQuiniela || !adminQuinielaCompleta || !adminQuinielaNombreValido || !adminQuinielaCelularValido || adminQuinielaDobles > adminQuinielaMaxDobles}
+                      onClick={saveAdminQuiniela}
+                      type="button"
+                    >
+                      {savingAdminQuiniela ? 'Guardando...' : adminEditQuinielaId ? 'Guardar cambios' : 'Crear quiniela'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           {toast ? <div className={`toast ${toast.kind} show`}>{toast.message}</div> : null}
 
