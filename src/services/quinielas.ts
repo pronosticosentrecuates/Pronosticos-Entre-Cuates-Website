@@ -150,7 +150,11 @@ export async function getSessionUser() {
   const supabase = getSupabase()
   if (!supabase) return null
   const { data, error } = await supabase.auth.getUser()
-  return error ? null : data.user
+  if (error) {
+    await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined)
+    return null
+  }
+  return data.user
 }
 
 export async function signInAdmin(email: string, password: string) {
@@ -307,6 +311,12 @@ export async function updateTournament(id: number, patch: Partial<{ nombre: stri
   if (error) throw error
 }
 
+export async function deleteTournamentById(id: number) {
+  const supabase = requireSupabase()
+  const { error } = await supabase.from('tournaments').delete().eq('id', id)
+  if (error) throw error
+}
+
 export async function createJornada(input: { tournamentId: number | null; nombre: string; numero: number | null; openAt: string | null; closeAt: string | null; firstPrize: number; secondPrize: number }) {
   const supabase = requireSupabase()
   const { error } = await supabase.from('jornadas').insert({
@@ -340,6 +350,66 @@ export async function updateJornada(id: number, patch: Partial<{ tournamentId: n
   if (patch.notes !== undefined) payload.notes = patch.notes
   if (patch.status === 'finished') payload.finished_at = new Date().toISOString()
   const { error } = await supabase.from('jornadas').update(payload).eq('id', id)
+  if (error) throw error
+}
+
+export async function deleteJornadaById(id: number) {
+  const supabase = requireSupabase()
+
+  const { data: jornadaQuinielas, error: quinielasLookupError } = await supabase
+    .from('quinielas')
+    .select('id')
+    .eq('jornada_id', id)
+  if (quinielasLookupError) throw quinielasLookupError
+
+  const quinielaIds = (jornadaQuinielas ?? []).map((row) => Number(row.id))
+
+  if (quinielaIds.length > 0) {
+    const { error: combinationsError } = await supabase
+      .from('combinations')
+      .delete()
+      .in('quiniela_id', quinielaIds)
+    if (combinationsError) throw combinationsError
+
+    const { error: selectionsError } = await supabase
+      .from('selections')
+      .delete()
+      .in('quiniela_id', quinielaIds)
+    if (selectionsError) throw selectionsError
+
+    const { error: quinielasError } = await supabase
+      .from('quinielas')
+      .delete()
+      .in('id', quinielaIds)
+    if (quinielasError) throw quinielasError
+  }
+
+  const { data: jornadaMatches, error: matchesLookupError } = await supabase
+    .from('matches')
+    .select('id')
+    .eq('jornada_id', id)
+  if (matchesLookupError) throw matchesLookupError
+
+  const matchIds = (jornadaMatches ?? []).map((row) => Number(row.id))
+
+  if (matchIds.length > 0) {
+    const { error: selectionsError } = await supabase
+      .from('selections')
+      .delete()
+      .in('partido_id', matchIds)
+    if (selectionsError) throw selectionsError
+
+    const { error: matchesError } = await supabase
+      .from('matches')
+      .delete()
+      .eq('jornada_id', id)
+    if (matchesError) throw matchesError
+  }
+
+  const { error } = await supabase.from('jornadas').delete().eq('id', id)
+  if (error?.code === '23503') {
+    throw new Error('No se puede eliminar esta jornada porque tiene informacion relacionada.')
+  }
   if (error) throw error
 }
 

@@ -14,10 +14,12 @@ import {
   type Modalidad,
   type PickOption,
 } from './data'
-import { APP_CONFIG, TEAM_LOGOS } from './config'
+import { APP_CONFIG, INTERNATIONAL_TEAM_NAMES, LIGA_MX_TEAM_NAMES, TEAM_LOGOS } from './config'
 import {
+  deleteJornadaById,
   deleteMatchById,
   deleteQuinielaById,
+  deleteTournamentById,
   createJornada,
   createTournament,
   distributeJornadaPrizes,
@@ -44,7 +46,7 @@ import {
 import type { Jornada, JornadaStatus, PaymentStatus, PublicStats, QuinielaStatus, SavedQuiniela, Tournament, TournamentStatus } from './types'
 import { getSupabase } from '../utils/supabase'
 
-type AppView = 'home' | 'registro' | 'resultados' | 'admin'
+type AppView = 'home' | 'registro' | 'admin'
 type AdminTab = 'quinielas' | 'create' | 'jornadas'
 
 type ToastKind = 'success' | 'error' | 'info'
@@ -59,9 +61,29 @@ type ConfirmAction = {
   id: number
 } | null
 
+type AdminDeleteConfirm = {
+  type: 'tournament' | 'jornada'
+  id: number
+  name: string
+} | null
+
+type TeamCatalog = 'liga-mx' | 'internacional'
+
 type ImportedMatch = Omit<Match, 'id'> & {
   sourceId: string
   round: string
+}
+
+type SportsDbEvent = {
+  idEvent?: string
+  strHomeTeam?: string
+  strAwayTeam?: string
+  dateEvent?: string
+  strTime?: string
+  strTimestamp?: string
+  intRound?: string | null
+  intHomeScore?: string | null
+  intAwayScore?: string | null
 }
 
 const MODALIDADES: Modalidad[] = ['3 dobles', '5 dobles']
@@ -104,6 +126,10 @@ const LIGA_MX_TEAM_ALIASES: Record<string, string> = {
   Toluca: 'Toluca',
 }
 
+const LIGA_MX_MATCH_TIME_OVERRIDES: Record<string, string> = {
+  '2026-2027|8|Toluca|Atlas': '2026-09-12T00:00',
+}
+
 // Note: quinielas and matches will be loaded from Supabase on mount.
 
 function normalizePhone(value: string) {
@@ -114,13 +140,20 @@ function normalizeLigaMxTeamName(teamName: string) {
   return LIGA_MX_TEAM_ALIASES[teamName] ?? teamName
 }
 
-function getMexicoDateTimeParts(dateEvent?: string | null, strTime?: string | null) {
-  if (!dateEvent) {
+function getLigaMxMatchTimeOverride(season: string, round: string, homeTeam: string, awayTeam: string) {
+  return LIGA_MX_MATCH_TIME_OVERRIDES[`${season}|${round}|${normalizeLigaMxTeamName(homeTeam)}|${normalizeLigaMxTeamName(awayTeam)}`]
+}
+
+function getMexicoDateTimeParts(dateEvent?: string | null, strTime?: string | null, strTimestamp?: string | null) {
+  if (!dateEvent && !strTimestamp) {
     return { value: 'TBD', timeClass: '' }
   }
 
   const time = strTime && /^\d{2}:\d{2}/.test(strTime) ? strTime.slice(0, 5) : '00:00'
-  const utcDate = new Date(`${dateEvent}T${time}:00Z`)
+  const timestamp = strTimestamp && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(strTimestamp)
+    ? strTimestamp
+    : `${dateEvent}T${time}:00`
+  const utcDate = new Date(`${timestamp.replace(/\.\d+$/, '').replace(/Z$/, '')}Z`)
   if (Number.isNaN(utcDate.getTime())) {
     return { value: 'TBD', timeClass: '' }
   }
@@ -193,30 +226,6 @@ function getMatchOutcome(localScore: number | null, visitanteScore: number | nul
   }
 
   return 'E'
-}
-
-function formatOfficialScore(localScore: number | null, visitanteScore: number | null) {
-  if (localScore === null || visitanteScore === null) {
-    return '—'
-  }
-
-  return `${localScore}-${visitanteScore}`
-}
-
-function formatOutcomeLabel(outcome: PickOption | null) {
-  if (outcome === 'L') {
-    return 'Gana local'
-  }
-
-  if (outcome === 'E') {
-    return 'Empate'
-  }
-
-  if (outcome === 'V') {
-    return 'Gana visitante'
-  }
-
-  return 'Pendiente'
 }
 
 function countQuinielaPoints(quiniela: SavedQuiniela, matches: Match[]) {
@@ -343,6 +352,8 @@ function App() {
   const [showAdminQuinielaModal, setShowAdminQuinielaModal] = useState(false)
   const [showTournamentModal, setShowTournamentModal] = useState(false)
   const [showJornadaModal, setShowJornadaModal] = useState(false)
+  const [showAddMatchModal, setShowAddMatchModal] = useState(false)
+  const [showLigaMxImportModal, setShowLigaMxImportModal] = useState(false)
   const [rankingModalFilter, setRankingModalFilter] = useState<'all' | Modalidad>('all')
   const [rankingSortOrder, setRankingSortOrder] = useState<'desc' | 'asc'>('desc')
   const [lookupFolio, setLookupFolio] = useState('')
@@ -354,6 +365,11 @@ function App() {
   const [newTournamentName, setNewTournamentName] = useState('')
   const [newTournamentLeague, setNewTournamentLeague] = useState('Liga MX')
   const [newTournamentSeason, setNewTournamentSeason] = useState(LIGA_MX_DEFAULT_SEASON)
+  const [editingTournamentId, setEditingTournamentId] = useState<number | null>(null)
+  const [editTournamentName, setEditTournamentName] = useState('')
+  const [editTournamentLeague, setEditTournamentLeague] = useState('')
+  const [editTournamentSeason, setEditTournamentSeason] = useState('')
+  const [editTournamentStatus, setEditTournamentStatus] = useState<TournamentStatus>('active')
   const [newJornadaName, setNewJornadaName] = useState('')
   const [newJornadaTournamentId, setNewJornadaTournamentId] = useState('')
   const [newJornadaNumber, setNewJornadaNumber] = useState('')
@@ -394,15 +410,27 @@ function App() {
   const [showNewVisitanteSuggestions, setShowNewVisitanteSuggestions] = useState(false)
   const [showEditLocalSuggestions, setShowEditLocalSuggestions] = useState(false)
   const [showEditVisitanteSuggestions, setShowEditVisitanteSuggestions] = useState(false)
+  const [teamCatalog, setTeamCatalog] = useState<TeamCatalog>('liga-mx')
 
-  const TEAM_NAMES = Object.keys(TEAM_LOGOS)
+  const TEAM_NAMES = teamCatalog === 'liga-mx' ? LIGA_MX_TEAM_NAMES : INTERNATIONAL_TEAM_NAMES
   const filterTeams = (q: string) => {
     const v = q.trim().toLowerCase()
     if (!v) return TEAM_NAMES
     return TEAM_NAMES.filter((t) => t.toLowerCase().includes(v))
   }
+  const renderTeamCatalogToggle = () => (
+    <div className="team-catalog-toggle" aria-label="Filtro de equipos">
+      <button className={teamCatalog === 'liga-mx' ? 'active' : ''} onClick={() => setTeamCatalog('liga-mx')} type="button">Liga MX</button>
+      <button className={teamCatalog === 'internacional' ? 'active' : ''} onClick={() => setTeamCatalog('internacional')} type="button">Internacional</button>
+    </div>
+  )
   const [toast, setToast] = useState<ToastState>(null)
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null)
+  const [adminDeleteConfirm, setAdminDeleteConfirm] = useState<AdminDeleteConfirm>(null)
+  const [paymentModalQuiniela, setPaymentModalQuiniela] = useState<SavedQuiniela | null>(null)
+  const [paymentReferenceInput, setPaymentReferenceInput] = useState('')
+  const [prizeModalQuiniela, setPrizeModalQuiniela] = useState<SavedQuiniela | null>(null)
+  const [prizeAmountInput, setPrizeAmountInput] = useState('')
   const nextId = useRef(1)
   const isJornadaOpenBySchedule = useCallback((item: Jornada | null | undefined) => {
     if (!item) return false
@@ -665,7 +693,6 @@ function App() {
   const registrosAbiertos = jornadaAbiertaPorFecha
   const puedeAgregar = registrosAbiertos && progresoCompleto && nombreValido && celularValido && doblesUsados <= maxDobles
   const totalGuardado = draftQuinielas.reduce((sum, quiniela) => sum + quiniela.costo, 0)
-  const publicPoolVisible = publicStats.pool * 0.7
   const jornadaTitle = jornada?.nombre ?? APP_CONFIG.edition
   const firstPrizeLabel = formatPrizeLabel(jornada?.firstPrize, APP_CONFIG.firstPrize)
   const secondPrizeLabel = formatPrizeLabel(jornada?.secondPrize, APP_CONFIG.secondPrize)
@@ -678,28 +705,10 @@ function App() {
     () => openJornadaId ? publicApprovedQuinielas.filter((quiniela) => quiniela.jornadaId === openJornadaId) : [],
     [openJornadaId, publicApprovedQuinielas],
   )
-  const registroTotalAcumulado = registroQuinielas.reduce((sum, quiniela) => sum + quiniela.costo, 0)
-  const registroTotalAcumuladoVisible = registroTotalAcumulado * 0.7
   const registroPointTotals = registroQuinielas.map((quiniela) => countQuinielaPoints(quiniela, registroMatches))
   const registroMaxPoints = registroPointTotals.length > 0 ? Math.max(...registroPointTotals) : 0
   const registroFirstPlaceCount = registroPointTotals.filter((points) => points === registroMaxPoints).length
   const registroZeroPointsCount = registroPointTotals.filter((points) => points === 0).length
-  const resultadosPartidos = matches.map((match) => {
-    const localScore = match.localScore ?? null
-    const visitanteScore = match.visitanteScore ?? null
-    const official = {
-      partidoId: match.id,
-      localScore,
-      visitanteScore,
-      estado: localScore !== null && visitanteScore !== null ? ('Finalizado' as const) : ('Pendiente' as const),
-    }
-
-    return {
-      ...match,
-      official,
-      outcome: getMatchOutcome(official.localScore, official.visitanteScore),
-    }
-  })
   const registroRankingRows = useMemo(() => {
     return registroQuinielas
       .map((quiniela) => ({
@@ -816,6 +825,14 @@ function App() {
     setNewTournamentLeague('Liga MX')
     setNewTournamentSeason(LIGA_MX_DEFAULT_SEASON)
     setShowTournamentModal(false)
+  }
+
+  const closeEditTournamentModal = () => {
+    setEditingTournamentId(null)
+    setEditTournamentName('')
+    setEditTournamentLeague('')
+    setEditTournamentSeason('')
+    setEditTournamentStatus('active')
   }
 
   const closeJornadaModal = () => {
@@ -1073,6 +1090,7 @@ function App() {
       setNewMatchDate('')
       setNewMatchTime('')
       await refreshQuinielas()
+      setShowAddMatchModal(false)
       const selectedJornada = openJornadas.find((item) => item.id === selectedJornadaId)
       setToast({ message: `Partido agregado a ${selectedJornada?.nombre ?? 'la jornada seleccionada'}.`, kind: 'success' })
     } catch (error) {
@@ -1100,40 +1118,40 @@ function App() {
       }
 
       const season = ligaMxSeason.trim() || LIGA_MX_DEFAULT_SEASON
-      const response = await fetch(`https://www.thesportsdb.com/api/v1/json/${SPORTSDB_KEY}/eventsseason.php?id=${leagueId}&s=${encodeURIComponent(season)}`)
+      const roundFilter = ligaMxRound.trim()
+      const endpoint = roundFilter
+        ? `eventsround.php?id=${leagueId}&r=${encodeURIComponent(roundFilter)}&s=${encodeURIComponent(season)}`
+        : `eventsseason.php?id=${leagueId}&s=${encodeURIComponent(season)}`
+      const response = await fetch(`https://www.thesportsdb.com/api/v1/json/${SPORTSDB_KEY}/${endpoint}`)
       if (!response.ok) {
         throw new Error(`TheSportsDB respondio con ${response.status}`)
       }
 
       const payload = await response.json() as {
-        events?: Array<{
-          idEvent?: string
-          strHomeTeam?: string
-          strAwayTeam?: string
-          dateEvent?: string
-          strTime?: string
-          intRound?: string | null
-          intHomeScore?: string | null
-          intAwayScore?: string | null
-        }> | null
+        events?: SportsDbEvent[] | null
       }
-      const roundFilter = ligaMxRound.trim()
       const imported = (payload.events ?? [])
         .filter((event) => event.strHomeTeam && event.strAwayTeam)
         .filter((event) => !roundFilter || String(event.intRound ?? '').trim() === roundFilter)
         .map((event): ImportedMatch => {
-          const { value, timeClass } = getMexicoDateTimeParts(event.dateEvent, event.strTime)
+          const rawRound = String(event.intRound ?? '')
+          const localImg = ''
+          const visitanteImg = ''
+          const overrideTime = getLigaMxMatchTimeOverride(season, rawRound, event.strHomeTeam ?? '', event.strAwayTeam ?? '')
+          const { value, timeClass } = getMexicoDateTimeParts(event.dateEvent, event.strTime, event.strTimestamp)
+          const matchTime = overrideTime ?? value
+          const matchDate = overrideTime ? new Date(overrideTime) : null
 
           return {
             sourceId: event.idEvent ?? `${event.strHomeTeam}-${event.strAwayTeam}-${event.dateEvent ?? ''}`,
-            round: String(event.intRound ?? ''),
+            round: rawRound,
             jornadaId: Number(newMatchJornadaId) || undefined,
             local: normalizeLigaMxTeamName(event.strHomeTeam ?? ''),
             visitante: normalizeLigaMxTeamName(event.strAwayTeam ?? ''),
-            time: value,
-            timeClass,
-            localImg: '',
-            visitanteImg: '',
+            time: matchTime,
+            timeClass: matchDate ? (matchDate.getDay() === 0 ? 'dom' : '') : timeClass,
+            localImg,
+            visitanteImg,
             localScore: parseScoreInput(event.intHomeScore ?? ''),
             visitanteScore: parseScoreInput(event.intAwayScore ?? ''),
           }
@@ -1190,6 +1208,7 @@ function App() {
       await refreshQuinielas()
       setLigaMxImportMatches([])
       setLigaMxImportMessage('')
+      setShowLigaMxImportModal(false)
       setToast({ message: `${matchesToSave.length} partidos de Liga MX guardados.`, kind: 'success' })
     } catch (error) {
       console.error(error)
@@ -1410,12 +1429,18 @@ function App() {
                 <span className="registro-team-label">
                   <span className="registro-team-line">
                     {renderTeamLogo(match.local, '⚽', 'registro-team-logo')}
-                    <span>{match.local}</span>
+                    <span className="registro-team-name-score">
+                      <span>{match.local}</span>
+                      <strong className="registro-team-score">{match.localScore ?? '-'}</strong>
+                    </span>
                   </span>
                   <small>vs</small>
                   <span className="registro-team-line away">
-                    <span>{match.visitante}</span>
                     {renderTeamLogo(match.visitante, '⚽', 'registro-team-logo')}
+                    <span className="registro-team-name-score">
+                      <span>{match.visitante}</span>
+                      <strong className="registro-team-score">{match.visitanteScore ?? '-'}</strong>
+                    </span>
                   </span>
                 </span>
               </th>
@@ -1462,15 +1487,15 @@ function App() {
   )
 
   const handlePaymentChange = async (quiniela: SavedQuiniela, paymentStatus: PaymentStatus) => {
+    if (paymentStatus === 'paid') {
+      setPaymentModalQuiniela(quiniela)
+      setPaymentReferenceInput(quiniela.paymentReference ?? '')
+      return
+    }
+
     try {
-      const reference = paymentStatus === 'paid' ? window.prompt('Referencia de pago:', quiniela.paymentReference ?? '') ?? '' : ''
-      const cleanReference = reference.trim()
-      if (paymentStatus === 'paid' && cleanReference.length === 0) {
-        setToast({ message: 'Ingresa una referencia de pago.', kind: 'error' })
-        return
-      }
-      await updateQuinielaPayment(quiniela.id, paymentStatus, cleanReference)
-      setQuinielas((current) => current.map((item) => (item.id === quiniela.id ? { ...item, paymentStatus, paymentReference: cleanReference, paidAt: paymentStatus === 'paid' ? new Date().toISOString() : null } : item)))
+      await updateQuinielaPayment(quiniela.id, paymentStatus, '')
+      setQuinielas((current) => current.map((item) => (item.id === quiniela.id ? { ...item, paymentStatus, paymentReference: '', paidAt: null } : item)))
       await refreshQuinielas()
       setToast({ message: 'Pago actualizado.', kind: 'success' })
     } catch (error) {
@@ -1480,12 +1505,27 @@ function App() {
   }
 
   const handlePrize = async (quiniela: SavedQuiniela) => {
-    const raw = window.prompt('Monto del premio:', String(quiniela.prizeAmount ?? 0))
-    if (raw === null) return
-    const amount = Number(raw)
-    if (!Number.isFinite(amount) || amount < 0) return
+    setPrizeModalQuiniela(quiniela)
+    setPrizeAmountInput(String(quiniela.prizeAmount ?? 0))
+  }
+
+  const closePrizeModal = () => {
+    setPrizeModalQuiniela(null)
+    setPrizeAmountInput('')
+  }
+
+  const savePrizeAmount = async () => {
+    if (!prizeModalQuiniela) return
+
+    const amount = Number(prizeAmountInput)
+    if (!Number.isFinite(amount) || amount < 0) {
+      setToast({ message: 'Ingresa un monto de premio valido.', kind: 'error' })
+      return
+    }
+
     try {
-      await updateQuinielaPrize(quiniela.id, amount, amount > 0)
+      await updateQuinielaPrize(prizeModalQuiniela.id, amount, amount > 0)
+      closePrizeModal()
       await refreshQuinielas()
       setToast({ message: 'Premio actualizado.', kind: 'success' })
     } catch (error) {
@@ -1543,6 +1583,67 @@ function App() {
     }
   }
 
+  const closePaymentModal = () => {
+    setPaymentModalQuiniela(null)
+    setPaymentReferenceInput('')
+  }
+
+  const savePaymentReference = async () => {
+    if (!paymentModalQuiniela) return
+
+    const cleanReference = paymentReferenceInput.trim()
+    if (cleanReference.length === 0) {
+      setToast({ message: 'Ingresa una referencia de pago.', kind: 'error' })
+      return
+    }
+
+    try {
+      await updateQuinielaPayment(paymentModalQuiniela.id, 'paid', cleanReference)
+      setQuinielas((current) => current.map((item) => (item.id === paymentModalQuiniela.id ? { ...item, paymentStatus: 'paid', paymentReference: cleanReference, paidAt: new Date().toISOString() } : item)))
+      closePaymentModal()
+      await refreshQuinielas()
+      setToast({ message: 'Pago actualizado.', kind: 'success' })
+    } catch (error) {
+      console.error(error)
+      setToast({ message: 'No se pudo actualizar el pago.', kind: 'error' })
+    }
+  }
+
+  const startEditTournament = (item: Tournament) => {
+    setEditingTournamentId(item.id)
+    setEditTournamentName(item.nombre)
+    setEditTournamentLeague(item.liga)
+    setEditTournamentSeason(item.temporada)
+    setEditTournamentStatus(item.status)
+  }
+
+  const saveEditTournament = async () => {
+    if (!editingTournamentId) return
+    if (editTournamentName.trim().length < 2) {
+      setToast({ message: 'Ingresa un nombre de torneo.', kind: 'error' })
+      return
+    }
+
+    try {
+      await updateTournament(editingTournamentId, {
+        nombre: editTournamentName.trim(),
+        liga: editTournamentLeague.trim() || 'Liga MX',
+        temporada: editTournamentSeason.trim() || LIGA_MX_DEFAULT_SEASON,
+        status: editTournamentStatus,
+      })
+      closeEditTournamentModal()
+      await refreshQuinielas()
+      setToast({ message: 'Torneo actualizado.', kind: 'success' })
+    } catch (error) {
+      console.error(error)
+      setToast({ message: 'No se pudo actualizar el torneo.', kind: 'error' })
+    }
+  }
+
+  const deleteTournament = async (item: Tournament) => {
+    setAdminDeleteConfirm({ type: 'tournament', id: item.id, name: item.nombre })
+  }
+
   const handleCreateJornada = async () => {
     if (newJornadaName.trim().length < 2) return
     try {
@@ -1567,6 +1668,39 @@ function App() {
     } catch (error) {
       console.error(error)
       setToast({ message: 'No se pudo crear la jornada.', kind: 'error' })
+    }
+  }
+
+  const deleteJornada = async (item: Jornada) => {
+    setAdminDeleteConfirm({ type: 'jornada', id: item.id, name: item.nombre })
+  }
+
+  const closeAdminDeleteConfirm = () => {
+    setAdminDeleteConfirm(null)
+  }
+
+  const runAdminDeleteConfirm = async () => {
+    if (!adminDeleteConfirm) return
+
+    try {
+      if (adminDeleteConfirm.type === 'tournament') {
+        await deleteTournamentById(adminDeleteConfirm.id)
+        setToast({ message: 'Torneo eliminado.', kind: 'info' })
+      } else {
+        await deleteJornadaById(adminDeleteConfirm.id)
+        if (editingJornadaId === adminDeleteConfirm.id) cancelEditJornada()
+        setToast({ message: 'Jornada eliminada.', kind: 'info' })
+      }
+      await refreshQuinielas()
+    } catch (error) {
+      const fallback = adminDeleteConfirm.type === 'tournament' ? 'No se pudo eliminar el torneo.' : 'No se pudo eliminar la jornada.'
+      const message = error instanceof Error ? error.message : fallback
+      if (!message.startsWith('No se puede eliminar')) {
+        console.error(error)
+      }
+      setToast({ message, kind: 'error' })
+    } finally {
+      setAdminDeleteConfirm(null)
     }
   }
 
@@ -1616,14 +1750,15 @@ function App() {
     setEditJornadaNotes('')
   }
 
-  const saveEditJornada = async (id: number) => {
+  const saveEditJornada = async () => {
+    if (!editingJornadaId) return
     if (editJornadaName.trim().length < 2) {
       setToast({ message: 'Ingresa un nombre de jornada valido.', kind: 'error' })
       return
     }
 
     try {
-      await updateJornada(id, {
+      await updateJornada(editingJornadaId, {
         tournamentId: editJornadaTournamentId ? Number(editJornadaTournamentId) : null,
         nombre: editJornadaName.trim(),
         numero: editJornadaNumber ? Number(editJornadaNumber) : null,
@@ -1729,7 +1864,7 @@ function App() {
   }
 
   return (
-    <div className={`app-shell${navOpen ? ' nav-open' : ''}`}>
+    <div className={`app-shell${navOpen ? ' nav-open' : ''}${activeView === 'registro' ? ' registro-shell' : ''}`}>
       <button className="nav-toggle" onClick={() => setNavOpen((current) => !current)} type="button" aria-expanded={navOpen} aria-label="Abrir o cerrar menu">
         Menu
       </button>
@@ -1746,23 +1881,8 @@ function App() {
           <button className={`nav-link-btn${activeView === 'registro' ? ' active' : ''}`} onClick={() => openView('registro')} type="button">
             Registro al momento/Verificador
           </button>
-          <button className={`nav-link-btn${activeView === 'resultados' ? ' active' : ''}`} onClick={() => openView('resultados')} type="button">
-            Resultados de la Jornada
-          </button>
           <button className={`nav-link-btn${activeView === 'admin' ? ' active' : ''}`} onClick={() => openView('admin')} type="button">
             Admin
-          </button>
-          <button className="nav-link-btn hidden-nav-link" type="button" hidden>
-          </button>
-          <button className="nav-link-btn hidden-nav-link" type="button" hidden>
-          </button>
-        </div>
-        <div className="topnav-social">
-          <button className="social-btn" title="Facebook" onClick={() => setNavOpen(false)} type="button">
-            f
-          </button>
-          <button className="social-btn" title="WhatsApp" onClick={() => setNavOpen(false)} type="button">
-            WA
           </button>
         </div>
       </nav>
@@ -1771,10 +1891,7 @@ function App() {
         <>
           <header className="hero">
             <div className="hero-inner">
-              <div className="hero-prize">
-                <div className="label">🏆 Acumulado</div>
-                <div className="amount">${publicPoolVisible.toFixed(2)}</div>
-              </div>
+
               <div className="hero-center">
                 <img src="/logo.png" className="hero-logo" alt="Pronosticos Entre Cuates" onError={(event) => { event.currentTarget.style.display = 'none' }} />
                 <div className="hero-edition">
@@ -2018,10 +2135,6 @@ function App() {
                 <strong>{registroQuinielas.length}</strong>
               </article>
               <article>
-                <span>Total acumulado</span>
-                <strong>${registroTotalAcumuladoVisible.toFixed(2)}</strong>
-              </article>
-              <article>
                 <span>Partidos</span>
                 <strong>{matches.length}</strong>
               </article>
@@ -2069,77 +2182,6 @@ function App() {
             )}
           </section>
 
-        </main>
-      ) : activeView === 'resultados' ? (
-        <main className="resultados-view">
-          <section className="resultados-hero">
-            <div className="resultados-kicker">Resultados de la jornada</div>
-            <h1>Resultados de la Jornada</h1>
-            <p>Consulta marcadores oficiales, estado de partidos y resultado de la jornada actual.</p>
-            <div className="resultados-stats">
-              <article>
-                <span>Partidos</span>
-                <strong>{matches.length}</strong>
-              </article>
-              <article>
-                <span>Quinielas aceptadas</span>
-                <strong>{publicApprovedQuinielas.length}</strong>
-              </article>
-              <article>
-                <span>Bolsa aceptada</span>
-                <strong>${registroTotalAcumuladoVisible.toFixed(2)}</strong>
-              </article>
-            </div>
-          </section>
-          <section className="resultados-card">
-            <div className="resultados-card-head">
-              <div>
-                <h2>Resultados oficiales {jornadaTitle}</h2>
-                <p>Marcador y estado de cada partido cargados en la jornada actual.</p>
-              </div>
-            </div>
-
-            <div className="results-table-wrap">
-              <table className="results-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Partido</th>
-                    <th>Marcador oficial</th>
-                    <th>Estado</th>
-                    <th>Resultado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {resultadosPartidos.map((match) => (
-                    <tr key={match.id}>
-                      <td><strong>#{match.id}</strong></td>
-                      <td>
-                        <div className="results-match">
-                          <span>{match.local}</span>
-                          <span className="results-vs">vs</span>
-                          <span>{match.visitante}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <strong className="results-score">{formatOfficialScore(match.official.localScore, match.official.visitanteScore)}</strong>
-                      </td>
-                      <td>
-                        <span className={`results-status ${match.official.estado.toLowerCase()}`}>
-                          {match.official.estado === 'Finalizado' ? 'Finalizado' : 'Pendiente'}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={`results-result ${match.outcome ?? 'pending'}`}>
-                          {formatOutcomeLabel(match.outcome)}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
         </main>
       ) : (
         <>
@@ -2322,9 +2364,7 @@ function App() {
                                             ❌ Rechazar
                                           </button>
                                         ) : null}
-                                        <button className="act-btn icon-action" onClick={() => startEditAdminQuiniela(quiniela)} type="button" title="Editar quiniela" aria-label={`Editar quiniela ${quiniela.folio ?? quiniela.id}`}>
-                                          ✏
-                                        </button>
+                                        <button className="act-btn icon-action edit-icon-action" onClick={() => startEditAdminQuiniela(quiniela)} type="button" title="Editar quiniela" aria-label={`Editar quiniela ${quiniela.folio ?? quiniela.id}`} />
                                         <button className="act-btn delete" onClick={() => openConfirm('delete', quiniela.id)} type="button">
                                           🗑
                                         </button>
@@ -2344,9 +2384,13 @@ function App() {
                     <div className="section-card">
                       <div className="section-head">
                         <h2>➕ Administrar partidos</h2>
+                        <div className="section-head-actions">
+                          <button className="ca-btn" onClick={() => setShowLigaMxImportModal(true)} type="button">Cargar Liga MX</button>
+                          <button className="ca-btn save" onClick={() => setShowAddMatchModal(true)} type="button">Agregar partido</button>
+                        </div>
                       </div>
                       <div className="section-body">
-                        <div className="create-grid">
+                        <div className="create-grid matches-modal-layout">
                           <div>
                             <div className="matches-create-wrap">
                               <div className="matches-create-context">Jornada visible: {jornada?.nombre ?? APP_CONFIG.edition}</div>
@@ -2376,8 +2420,11 @@ function App() {
                                   <div className="match-create-row" key={match.id}>
                                     <div className="mcr-num">{index + 1}</div>
 
-                                    {editingMatchId === match.id ? (
+                                    {false && editingMatchId === match.id ? (
                                       <div className="mcr-edit-layout">
+                                        <div className="mcr-edit-catalog">
+                                          {renderTeamCatalogToggle()}
+                                        </div>
                                         <div className="mcr-teams-edit">
                                           <div className="mcr-team-edit-block">
                                             <div className="mcr-team-edit-head">
@@ -2404,7 +2451,7 @@ function App() {
                                               />
                                               {showEditLocalSuggestions ? (
                                                 <div className="suggestions">
-                                                  {TEAM_NAMES.map((t) => (
+                                                  {filterTeams(editLocal).map((t) => (
                                                     <div
                                                       key={t}
                                                       className="suggestion-item"
@@ -2446,7 +2493,7 @@ function App() {
                                               />
                                               {showEditVisitanteSuggestions ? (
                                                 <div className="suggestions">
-                                                  {TEAM_NAMES.map((t) => (
+                                                  {filterTeams(editVisitante).map((t) => (
                                                     <div
                                                       key={t}
                                                       className="suggestion-item"
@@ -2513,7 +2560,7 @@ function App() {
                             </div>
                           </div>
 
-                          <div className="register-panel">
+                          <div className="register-panel match-side-panel-hidden">
                             <div className="rp-card">
                               <div className="rp-field">
                                 <div className="rp-label">Jornada destino</div>
@@ -2567,6 +2614,9 @@ function App() {
                                 ) : null}
                               </div>
                               <div className="rp-title">➕ Agregar partido</div>
+                              <div className="match-add-head">
+                                {renderTeamCatalogToggle()}
+                              </div>
                               <div className="rp-field">
                                 <div className="rp-label">Local</div>
                                 <div style={{ position: 'relative' }}>
@@ -2660,8 +2710,10 @@ function App() {
                                 </div>
                                 <div className="acts-cell">
                                   <span className={`status-badge ${item.status}`}>{item.status}</span>
+                                  <button className="act-btn" onClick={() => startEditTournament(item)} type="button">Editar</button>
                                   {item.status !== 'active' ? <button className="act-btn" onClick={() => handleTournamentStatus(item, 'active')} type="button">Activar</button> : null}
                                   {item.status !== 'finished' ? <button className="act-btn accept" onClick={() => handleTournamentStatus(item, 'finished')} type="button">Finalizar</button> : null}
+                                  <button className="act-btn delete" onClick={() => deleteTournament(item)} type="button">Eliminar</button>
                                 </div>
                               </div>
                             ))}
@@ -2670,88 +2722,22 @@ function App() {
                         <div className="jornada-list">
                           {jornadas.map((item) => (
                             <article className="jornada-item" key={item.id}>
-                              {editingJornadaId === item.id ? (
-                                <>
-                                  <div className="jornada-edit-grid">
-                                    <label className="jornada-field">
-                                      <span>Torneo</span>
-                                      <select className="rp-input" value={editJornadaTournamentId} onChange={(event) => setEditJornadaTournamentId(event.target.value)}>
-                                        <option value="">Sin torneo</option>
-                                        {tournaments.map((tournament) => (
-                                          <option key={tournament.id} value={tournament.id}>{tournament.nombre}</option>
-                                        ))}
-                                      </select>
-                                    </label>
-                                    <label className="jornada-field">
-                                      <span>Numero</span>
-                                      <input className="rp-input" min={1} placeholder="1" type="number" value={editJornadaNumber} onChange={(event) => setEditJornadaNumber(event.target.value)} />
-                                    </label>
-                                    <label className="jornada-field">
-                                      <span>Nombre</span>
-                                      <input className="rp-input" placeholder="Nombre" value={editJornadaName} onChange={(event) => setEditJornadaName(event.target.value)} />
-                                    </label>
-                                    <label className="jornada-field">
-                                      <span>Apertura</span>
-                                      <input className="rp-input" type="datetime-local" value={editJornadaOpen} onChange={(event) => setEditJornadaOpen(event.target.value)} />
-                                    </label>
-                                    <label className="jornada-field">
-                                      <span>Cierre</span>
-                                      <input className="rp-input" type="datetime-local" value={editJornadaClose} onChange={(event) => setEditJornadaClose(event.target.value)} />
-                                    </label>
-                                    <label className="jornada-field">
-                                      <span>Primer premio</span>
-                                      <input className="rp-input" min={0} placeholder="Primer premio" type="number" value={editJornadaFirstPrize} onChange={(event) => setEditJornadaFirstPrize(event.target.value)} />
-                                    </label>
-                                    <label className="jornada-field">
-                                      <span>Segundo premio</span>
-                                      <input className="rp-input" min={0} placeholder="Segundo premio" type="number" value={editJornadaSecondPrize} onChange={(event) => setEditJornadaSecondPrize(event.target.value)} />
-                                    </label>
-                                    <label className="jornada-field jornada-notes-input">
-                                      <span>Notas</span>
-                                      <textarea className="rp-input" placeholder="Notas" value={editJornadaNotes} onChange={(event) => setEditJornadaNotes(event.target.value)} />
-                                    </label>
-                                    <div className="jornada-match-preview">
-                                      <div className="jornada-match-preview-title">Partidos en esta jornada</div>
-                                      {getJornadaMatches(item.id).length === 0 ? (
-                                        <div className="jornada-match-empty">Esta jornada todavia no tiene partidos.</div>
-                                      ) : (
-                                        <div className="jornada-match-list">
-                                          {getJornadaMatches(item.id).map((match) => (
-                                            <div className="jornada-match-item" key={match.id}>
-                                              <span>{match.local}</span>
-                                              <strong>vs</strong>
-                                              <span>{match.visitante}</span>
-                                              <em>{formatMatchTime(match.time)}</em>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <div className="acts-cell">
-                                    <button className="act-btn save" onClick={() => saveEditJornada(item.id)} type="button">Guardar</button>
-                                    <button className="act-btn cancel" onClick={cancelEditJornada} type="button">Cancelar</button>
-                                  </div>
-                                </>
-                              ) : (
-                                <>
-                                  <div>
-                                    <strong>{item.numero ? `Jornada ${item.numero}: ${item.nombre}` : item.nombre}</strong>
-                                    <span>Torneo: {tournaments.find((tournament) => tournament.id === item.tournamentId)?.nombre ?? 'Sin torneo'}</span>
-                                    <span>Apertura: {item.openAt ? new Date(item.openAt).toLocaleString('es-MX') : 'Manual'}</span>
-                                    <span>{item.closeAt ? new Date(item.closeAt).toLocaleString('es-MX') : 'Sin cierre programado'}</span>
-                                    <span>Premios: ${item.firstPrize} / ${item.secondPrize}</span>
-                                  </div>
-                                  <div className="acts-cell">
-                                    <span className={`status-badge ${item.status}`}>{item.status}</span>
-                                    <button className="act-btn" onClick={() => startEditJornada(item)} type="button">Editar</button>
-                                    <button className="act-btn" onClick={() => handleJornadaStatus(item, 'open')} type="button">Abrir</button>
-                                    <button className="act-btn cancel" onClick={() => handleJornadaStatus(item, 'closed')} type="button">Cerrar</button>
-                                    <button className="act-btn" onClick={() => handleDistributePrizes(item)} type="button">Repartir premios</button>
-                                    <button className="act-btn accept" onClick={() => handleJornadaStatus(item, 'finished')} type="button">Finalizar</button>
-                                  </div>
-                                </>
-                              )}
+                              <div>
+                                <strong>{item.numero ? `Jornada ${item.numero}: ${item.nombre}` : item.nombre}</strong>
+                                <span>Torneo: {tournaments.find((tournament) => tournament.id === item.tournamentId)?.nombre ?? 'Sin torneo'}</span>
+                                <span>Apertura: {item.openAt ? new Date(item.openAt).toLocaleString('es-MX') : 'Manual'}</span>
+                                <span>{item.closeAt ? new Date(item.closeAt).toLocaleString('es-MX') : 'Sin cierre programado'}</span>
+                                <span>Premios: ${item.firstPrize} / ${item.secondPrize}</span>
+                              </div>
+                              <div className="acts-cell">
+                                <span className={`status-badge ${item.status}`}>{item.status}</span>
+                                <button className="act-btn" onClick={() => startEditJornada(item)} type="button">Editar</button>
+                                <button className="act-btn" onClick={() => handleJornadaStatus(item, 'open')} type="button">Abrir</button>
+                                <button className="act-btn cancel" onClick={() => handleJornadaStatus(item, 'closed')} type="button">Cerrar</button>
+                                <button className="act-btn" onClick={() => handleDistributePrizes(item)} type="button">Repartir premios</button>
+                                <button className="act-btn accept" onClick={() => handleJornadaStatus(item, 'finished')} type="button">Finalizar</button>
+                                <button className="act-btn delete" onClick={() => deleteJornada(item)} type="button">Eliminar</button>
+                              </div>
                             </article>
                           ))}
                         </div>
@@ -2841,6 +2827,48 @@ function App() {
             </div>
           ) : null}
 
+          {editingTournamentId && adminAuthenticated ? (
+            <div className="modal-overlay show">
+              <div className="modal-card admin-form-modal">
+                <div className="admin-quiniela-editor">
+                  <div className="admin-quiniela-editor-head">
+                    <div>
+                      <h3>Editar Torneo</h3>
+                      <p>Actualiza los datos generales y el estado del torneo.</p>
+                    </div>
+                    <button className="modal-close-btn" onClick={closeEditTournamentModal} type="button" aria-label="Cerrar modal">×</button>
+                  </div>
+                  <div className="modal-form-grid">
+                    <label className="jornada-field">
+                      <span>Nombre del torneo</span>
+                      <input className="rp-input" placeholder="Apertura 2026" value={editTournamentName} onChange={(event) => setEditTournamentName(event.target.value)} />
+                    </label>
+                    <label className="jornada-field">
+                      <span>Liga</span>
+                      <input className="rp-input" placeholder="Liga MX" value={editTournamentLeague} onChange={(event) => setEditTournamentLeague(event.target.value)} />
+                    </label>
+                    <label className="jornada-field">
+                      <span>Temporada</span>
+                      <input className="rp-input" placeholder="2026-2027" value={editTournamentSeason} onChange={(event) => setEditTournamentSeason(event.target.value)} />
+                    </label>
+                    <label className="jornada-field">
+                      <span>Estado</span>
+                      <select className="rp-input" value={editTournamentStatus} onChange={(event) => setEditTournamentStatus(event.target.value as TournamentStatus)}>
+                        <option value="draft">Draft</option>
+                        <option value="active">Active</option>
+                        <option value="finished">Finished</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div className="admin-quiniela-actions">
+                    <button className="act-btn cancel" onClick={closeEditTournamentModal} type="button">Cancelar</button>
+                    <button className="act-btn save" onClick={saveEditTournament} type="button">Guardar cambios</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           {showJornadaModal && adminAuthenticated ? (
             <div className="modal-overlay show">
               <div className="modal-card admin-form-modal jornada-form-modal">
@@ -2890,6 +2918,272 @@ function App() {
                   <div className="admin-quiniela-actions">
                     <button className="act-btn cancel" onClick={closeJornadaModal} type="button">Cancelar</button>
                     <button className="act-btn save" onClick={handleCreateJornada} type="button">Crear jornada</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {editingJornadaId && adminAuthenticated ? (
+            <div className="modal-overlay show">
+              <div className="modal-card admin-form-modal jornada-form-modal">
+                <div className="admin-quiniela-editor">
+                  <div className="admin-quiniela-editor-head">
+                    <div>
+                      <h3>Editar Jornada</h3>
+                      <p>Modifica torneo, fechas, premios y notas de la jornada.</p>
+                    </div>
+                    <button className="modal-close-btn" onClick={cancelEditJornada} type="button" aria-label="Cerrar modal">×</button>
+                  </div>
+                  <div className="modal-form-grid jornada-modal-grid">
+                    <label className="jornada-field">
+                      <span>Torneo</span>
+                      <select className="rp-input" value={editJornadaTournamentId} onChange={(event) => setEditJornadaTournamentId(event.target.value)}>
+                        <option value="">Sin torneo</option>
+                        {tournaments.map((tournament) => (
+                          <option key={tournament.id} value={tournament.id}>{tournament.nombre}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="jornada-field">
+                      <span>Numero</span>
+                      <input className="rp-input" min={1} placeholder="1" type="number" value={editJornadaNumber} onChange={(event) => setEditJornadaNumber(event.target.value)} />
+                    </label>
+                    <label className="jornada-field">
+                      <span>Nombre</span>
+                      <input className="rp-input" placeholder="Nombre de la jornada" value={editJornadaName} onChange={(event) => setEditJornadaName(event.target.value)} />
+                    </label>
+                    <label className="jornada-field">
+                      <span>Apertura</span>
+                      <input className="rp-input" type="datetime-local" value={editJornadaOpen} onChange={(event) => setEditJornadaOpen(event.target.value)} />
+                    </label>
+                    <label className="jornada-field">
+                      <span>Cierre</span>
+                      <input className="rp-input" type="datetime-local" value={editJornadaClose} onChange={(event) => setEditJornadaClose(event.target.value)} />
+                    </label>
+                    <label className="jornada-field">
+                      <span>Primer premio</span>
+                      <input className="rp-input" min={0} placeholder="Primer premio" type="number" value={editJornadaFirstPrize} onChange={(event) => setEditJornadaFirstPrize(event.target.value)} />
+                    </label>
+                    <label className="jornada-field">
+                      <span>Segundo premio</span>
+                      <input className="rp-input" min={0} placeholder="Segundo premio" type="number" value={editJornadaSecondPrize} onChange={(event) => setEditJornadaSecondPrize(event.target.value)} />
+                    </label>
+                    <label className="jornada-field jornada-notes-input">
+                      <span>Notas</span>
+                      <textarea className="rp-input" placeholder="Notas" value={editJornadaNotes} onChange={(event) => setEditJornadaNotes(event.target.value)} />
+                    </label>
+                    <div className="jornada-match-preview">
+                      <div className="jornada-match-preview-title">Partidos en esta jornada</div>
+                      {getJornadaMatches(editingJornadaId).length === 0 ? (
+                        <div className="jornada-match-empty">Esta jornada todavia no tiene partidos.</div>
+                      ) : (
+                        <div className="jornada-match-list">
+                          {getJornadaMatches(editingJornadaId).map((match) => (
+                            <div className="jornada-match-item" key={match.id}>
+                              <span>{match.local}</span>
+                              <strong>vs</strong>
+                              <span>{match.visitante}</span>
+                              <em>{formatMatchTime(match.time)}</em>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="admin-quiniela-actions">
+                    <button className="act-btn cancel" onClick={cancelEditJornada} type="button">Cancelar</button>
+                    <button className="act-btn save" onClick={saveEditJornada} type="button">Guardar cambios</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {showLigaMxImportModal && adminAuthenticated ? (
+            <div className="modal-overlay show">
+              <div className="modal-card admin-form-modal jornada-form-modal">
+                <div className="admin-quiniela-editor">
+                  <div className="admin-quiniela-editor-head">
+                    <div>
+                      <h3>Cargar Liga MX</h3>
+                      <p>Importa partidos desde TheSportsDB y guardalos en la jornada seleccionada.</p>
+                    </div>
+                    <button className="modal-close-btn" onClick={() => setShowLigaMxImportModal(false)} type="button" aria-label="Cerrar modal">×</button>
+                  </div>
+                  <div className="modal-form-grid jornada-modal-grid">
+                    <label className="jornada-field">
+                      <span>Jornada destino</span>
+                      <select className="rp-input" disabled={openJornadas.length === 0} value={newMatchJornadaId} onChange={(event) => setNewMatchJornadaId(event.target.value)}>
+                        {openJornadas.length === 0 ? <option value="">No hay jornadas disponibles</option> : null}
+                        {openJornadas.map((item) => (
+                          <option key={item.id} value={item.id}>{item.nombre}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="jornada-field">
+                      <span>Temporada</span>
+                      <input className="rp-input" value={ligaMxSeason} onChange={(event) => setLigaMxSeason(event.target.value)} placeholder="2026-2027" />
+                    </label>
+                    <label className="jornada-field">
+                      <span>Jornada Liga MX</span>
+                      <input className="rp-input" inputMode="numeric" value={ligaMxRound} onChange={(event) => setLigaMxRound(event.target.value.replace(/\D/g, ''))} placeholder="Todas" />
+                    </label>
+                  </div>
+                  <div className="liga-import-actions modal-import-actions">
+                    <button className="ca-btn" onClick={fetchLigaMxMatches} type="button" disabled={loadingLigaMxMatches}>
+                      {loadingLigaMxMatches ? 'Cargando...' : 'Cargar temporada'}
+                    </button>
+                    <button className="ca-btn save" onClick={saveLigaMxImportMatches} type="button" disabled={savingLigaMxMatches || ligaMxImportMatches.length === 0}>
+                      {savingLigaMxMatches ? 'Guardando...' : 'Guardar en jornada'}
+                    </button>
+                  </div>
+                  {ligaMxImportMessage ? <div className="liga-import-message">{ligaMxImportMessage}</div> : null}
+                  {ligaMxImportMatches.length > 0 ? (
+                    <div className="liga-import-preview modal-import-preview">
+                      {ligaMxImportMatches.map((match) => (
+                        <div className="liga-import-item" key={match.sourceId}>
+                          <strong>{match.local} vs {match.visitante}</strong>
+                          <span>{match.round ? `J${match.round} · ` : ''}{formatMatchTime(match.time)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {showAddMatchModal && adminAuthenticated ? (
+            <div className="modal-overlay show">
+              <div className="modal-card admin-form-modal jornada-form-modal">
+                <div className="admin-quiniela-editor">
+                  <div className="admin-quiniela-editor-head">
+                    <div>
+                      <h3>Agregar Partido</h3>
+                      <p>Captura equipos, fecha y hora para la jornada seleccionada.</p>
+                    </div>
+                    <button className="modal-close-btn" onClick={() => setShowAddMatchModal(false)} type="button" aria-label="Cerrar modal">×</button>
+                  </div>
+                  <div className="match-add-head">
+                    {renderTeamCatalogToggle()}
+                  </div>
+                  <div className="modal-form-grid jornada-modal-grid">
+                    <label className="jornada-field">
+                      <span>Jornada destino</span>
+                      <select className="rp-input" disabled={openJornadas.length === 0} value={newMatchJornadaId} onChange={(event) => setNewMatchJornadaId(event.target.value)}>
+                        {openJornadas.length === 0 ? <option value="">No hay jornadas disponibles</option> : null}
+                        {openJornadas.map((item) => (
+                          <option key={item.id} value={item.id}>{item.nombre}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="jornada-field team-suggest-field">
+                      <span>Local</span>
+                      <input className="rp-input" placeholder="Equipo local" value={newMatchLocal} onChange={(event) => { setNewMatchLocal(event.target.value); setShowNewLocalSuggestions(true) }} onFocus={() => setShowNewLocalSuggestions(true)} onBlur={() => setTimeout(() => setShowNewLocalSuggestions(false), 150)} />
+                      {showNewLocalSuggestions ? (
+                        <div className="suggestions">
+                          {filterTeams(newMatchLocal).map((team) => (
+                            <div key={team} className="suggestion-item" onMouseDown={() => { setNewMatchLocal(team); setShowNewLocalSuggestions(false) }}>{team}</div>
+                          ))}
+                        </div>
+                      ) : null}
+                    </label>
+                    <label className="jornada-field team-suggest-field">
+                      <span>Visitante</span>
+                      <input className="rp-input" placeholder="Equipo visitante" value={newMatchVisitante} onChange={(event) => { setNewMatchVisitante(event.target.value); setShowNewVisitanteSuggestions(true) }} onFocus={() => setShowNewVisitanteSuggestions(true)} onBlur={() => setTimeout(() => setShowNewVisitanteSuggestions(false), 150)} />
+                      {showNewVisitanteSuggestions ? (
+                        <div className="suggestions">
+                          {filterTeams(newMatchVisitante).map((team) => (
+                            <div key={team} className="suggestion-item" onMouseDown={() => { setNewMatchVisitante(team); setShowNewVisitanteSuggestions(false) }}>{team}</div>
+                          ))}
+                        </div>
+                      ) : null}
+                    </label>
+                    <label className="jornada-field">
+                      <span>Fecha</span>
+                      <input className="rp-input" type="date" value={newMatchDate} onChange={(event) => setNewMatchDate(event.target.value)} />
+                    </label>
+                    <label className="jornada-field">
+                      <span>Hora</span>
+                      <input className="rp-input" type="time" value={newMatchTime} onChange={(event) => setNewMatchTime(event.target.value)} />
+                    </label>
+                  </div>
+                  <div className="admin-quiniela-actions">
+                    <button className="act-btn cancel" onClick={() => setShowAddMatchModal(false)} type="button">Cancelar</button>
+                    <button className="act-btn save" onClick={addMatch} type="button">Agregar partido</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {editingMatchId && adminAuthenticated ? (
+            <div className="modal-overlay show">
+              <div className="modal-card admin-form-modal jornada-form-modal">
+                <div className="admin-quiniela-editor">
+                  <div className="admin-quiniela-editor-head">
+                    <div>
+                      <h3>Editar Partido</h3>
+                      <p>Actualiza equipos, marcador, fecha, hora y jornada.</p>
+                    </div>
+                    <button className="modal-close-btn" onClick={cancelEditMatch} type="button" aria-label="Cerrar modal">×</button>
+                  </div>
+                  <div className="match-add-head">
+                    {renderTeamCatalogToggle()}
+                  </div>
+                  <div className="modal-form-grid jornada-modal-grid">
+                    <label className="jornada-field team-suggest-field">
+                      <span>Local</span>
+                      <input className="rp-input" value={editLocal} onChange={(event) => { setEditLocal(event.target.value); setShowEditLocalSuggestions(true) }} onFocus={() => setShowEditLocalSuggestions(true)} onBlur={() => setTimeout(() => setShowEditLocalSuggestions(false), 150)} />
+                      {showEditLocalSuggestions ? (
+                        <div className="suggestions">
+                          {filterTeams(editLocal).map((team) => (
+                            <div key={team} className="suggestion-item" onMouseDown={() => { setEditLocal(team); setShowEditLocalSuggestions(false) }}>{team}</div>
+                          ))}
+                        </div>
+                      ) : null}
+                    </label>
+                    <label className="jornada-field team-suggest-field">
+                      <span>Visitante</span>
+                      <input className="rp-input" value={editVisitante} onChange={(event) => { setEditVisitante(event.target.value); setShowEditVisitanteSuggestions(true) }} onFocus={() => setShowEditVisitanteSuggestions(true)} onBlur={() => setTimeout(() => setShowEditVisitanteSuggestions(false), 150)} />
+                      {showEditVisitanteSuggestions ? (
+                        <div className="suggestions">
+                          {filterTeams(editVisitante).map((team) => (
+                            <div key={team} className="suggestion-item" onMouseDown={() => { setEditVisitante(team); setShowEditVisitanteSuggestions(false) }}>{team}</div>
+                          ))}
+                        </div>
+                      ) : null}
+                    </label>
+                    <label className="jornada-field">
+                      <span>Goles local</span>
+                      <input className="rp-input" min={0} placeholder="Goles" type="number" value={editLocalScore} onChange={(event) => setEditLocalScore(event.target.value)} />
+                    </label>
+                    <label className="jornada-field">
+                      <span>Goles visitante</span>
+                      <input className="rp-input" min={0} placeholder="Goles" type="number" value={editVisitanteScore} onChange={(event) => setEditVisitanteScore(event.target.value)} />
+                    </label>
+                    <label className="jornada-field">
+                      <span>Fecha</span>
+                      <input className="rp-input" type="date" value={editDate} onChange={(event) => setEditDate(event.target.value)} />
+                    </label>
+                    <label className="jornada-field">
+                      <span>Hora</span>
+                      <input className="rp-input" type="time" value={editTime} onChange={(event) => setEditTime(event.target.value)} />
+                    </label>
+                    <label className="jornada-field">
+                      <span>Jornada</span>
+                      <select className="rp-input" disabled={jornadas.length === 0} value={editMatchJornadaId} onChange={(event) => setEditMatchJornadaId(event.target.value)}>
+                        {jornadas.length === 0 ? <option value="">Sin jornadas</option> : null}
+                        {jornadas.map((item) => (
+                          <option key={item.id} value={item.id}>{item.nombre}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  <div className="admin-quiniela-actions">
+                    <button className="act-btn cancel" onClick={cancelEditMatch} type="button">Cancelar</button>
+                    <button className="act-btn save" onClick={() => saveEditMatch(editingMatchId)} type="button">Guardar cambios</button>
                   </div>
                 </div>
               </div>
@@ -2988,6 +3282,111 @@ function App() {
           ) : null}
 
           {toast ? <div className={`toast ${toast.kind} show`}>{toast.message}</div> : null}
+
+          {paymentModalQuiniela && adminAuthenticated ? (
+            <div className="modal-overlay show">
+              <div className="modal-card admin-form-modal">
+                <div className="admin-quiniela-editor">
+                  <div className="admin-quiniela-editor-head">
+                    <div>
+                      <h3>Referencia de Pago</h3>
+                      <p>{paymentModalQuiniela.folio ?? `#${paymentModalQuiniela.id}`} · {paymentModalQuiniela.nombre}</p>
+                    </div>
+                    <button className="modal-close-btn" onClick={closePaymentModal} type="button" aria-label="Cerrar modal">×</button>
+                  </div>
+                  <div className="modal-form-grid">
+                    <label className="jornada-field modal-field-full">
+                      <span>Referencia</span>
+                      <input
+                        className="rp-input"
+                        autoFocus
+                        placeholder="Referencia de pago"
+                        value={paymentReferenceInput}
+                        onChange={(event) => setPaymentReferenceInput(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') {
+                            savePaymentReference()
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                  <div className="admin-quiniela-actions">
+                    <button className="act-btn cancel" onClick={closePaymentModal} type="button">Cancelar</button>
+                    <button className="act-btn save" onClick={savePaymentReference} type="button">Guardar referencia</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {prizeModalQuiniela && adminAuthenticated ? (
+            <div className="modal-overlay show">
+              <div className="modal-card admin-form-modal">
+                <div className="admin-quiniela-editor">
+                  <div className="admin-quiniela-editor-head">
+                    <div>
+                      <h3>Monto del Premio</h3>
+                      <p>{prizeModalQuiniela.folio ?? `#${prizeModalQuiniela.id}`} · {prizeModalQuiniela.nombre}</p>
+                    </div>
+                    <button className="modal-close-btn" onClick={closePrizeModal} type="button" aria-label="Cerrar modal">×</button>
+                  </div>
+                  <div className="modal-form-grid">
+                    <label className="jornada-field modal-field-full">
+                      <span>Monto</span>
+                      <input
+                        className="rp-input"
+                        autoFocus
+                        min={0}
+                        placeholder="0"
+                        type="number"
+                        value={prizeAmountInput}
+                        onChange={(event) => setPrizeAmountInput(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') {
+                            savePrizeAmount()
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                  <div className="admin-quiniela-actions">
+                    <button className="act-btn cancel" onClick={closePrizeModal} type="button">Cancelar</button>
+                    <button className="act-btn save" onClick={savePrizeAmount} type="button">Guardar monto</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {adminDeleteConfirm ? (
+            <div className="modal-overlay show">
+              <div className="modal-card">
+                <div className="modal-title">
+                  {adminDeleteConfirm.type === 'tournament' ? 'Eliminar torneo' : 'Eliminar jornada'}
+                </div>
+                <div className="modal-body">
+                  {adminDeleteConfirm.type === 'tournament' ? (
+                    <>
+                      Se eliminara el torneo <strong>{adminDeleteConfirm.name}</strong>. Esta accion no se puede deshacer.
+                    </>
+                  ) : (
+                    <>
+                      Se eliminara la jornada <strong>{adminDeleteConfirm.name}</strong>, junto con sus partidos, quinielas y selecciones. Esta accion no se puede deshacer.
+                    </>
+                  )}
+                </div>
+                <div className="modal-actions">
+                  <button className="modal-btn" onClick={closeAdminDeleteConfirm} type="button">
+                    Cancelar
+                  </button>
+                  <button className="modal-btn confirm-cancel" onClick={runAdminDeleteConfirm} type="button">
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           {confirmAction ? (
             <div className="modal-overlay show">

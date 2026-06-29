@@ -46,7 +46,7 @@ body {
   /* Asegura que la página ocupe toda la altura */
   min-height: 100vh;
   margin-left: 0;
-  overflow-x: hidden;
+  overflow-x: visible;
   /* Fondo compuesto: degradados y patrón SVG embebido */
   background-image:
     radial-gradient(ellipse at 20% 0%, rgba(21, 101, 192, 0.4) 0%, transparent 60%),
@@ -60,6 +60,11 @@ body {
 
 .app-shell {
   min-height: 100vh;
+}
+
+.registro-shell {
+  width: max-content;
+  min-width: 100%;
 }
 
 .app-notice {
@@ -328,9 +333,9 @@ body {
 /* Contenedor interno del hero centrado y con límites de ancho */
 .hero-inner {
   position: relative;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -361,6 +366,7 @@ body {
 
 /* Centro del hero: logo + edición */
 .hero-center {
+  grid-column: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -404,6 +410,7 @@ body {
 
 /* Caja pequeña a la derecha del hero (contador/tiempo) */
 .hero-close {
+  justify-self: end;
   background: rgba(255, 214, 0, 0.15);
   border: 1px solid var(--yellow);
   border-radius: 8px;
@@ -514,6 +521,45 @@ body {
 }
 .suggestion-item:hover { background: rgba(30,136,229,0.06); color: var(--cyan); }
 
+.match-add-head,
+.mcr-edit-catalog {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.team-catalog-toggle {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(0, 229, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(5, 18, 38, 0.72);
+}
+
+.team-catalog-toggle button {
+  min-width: 92px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--gray-mid);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.team-catalog-toggle button.active {
+  background: rgba(0, 229, 255, 0.12);
+  color: var(--cyan);
+}
+
+.mcr-edit-catalog {
+  grid-column: 1 / -1;
+}
+
 /* Divider con fecha o jornada */
 .date-divider {
   background: linear-gradient(90deg, var(--blue-accent), #0d47a1);
@@ -623,7 +669,24 @@ body {
 }
 
 .registro-team-line.away {
-  flex-direction: row-reverse;
+  flex-direction: row;
+}
+
+.registro-team-score {
+  min-width: 22px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--yellow);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 14px;
+  line-height: 1;
+  margin: 0 2px;
 }
 
 .match-vs {
@@ -1163,7 +1226,8 @@ body {
 
 /* Vista de registro al momento */
 .registro-view {
-  width: min(1280px, calc(100% - 32px));
+  width: max-content;
+  min-width: min(1280px, calc(100vw - 32px));
   margin: 28px auto 0;
   display: flex;
   flex-direction: column;
@@ -1240,6 +1304,8 @@ body {
   border-radius: 18px;
   padding: 18px;
   box-shadow: 0 16px 34px rgba(0, 0, 0, 0.24);
+  width: max-content;
+  min-width: 100%;
 }
 
 .registro-card-head {
@@ -1288,19 +1354,34 @@ body {
 }
 
 .registro-table-wrap {
-  overflow-x: auto;
+  overflow-x: visible;
   border-radius: 10px;
   border: 1px solid rgba(0, 0, 0, 0.75);
   background: #f4f7fb;
   box-shadow: 0 18px 34px rgba(0, 0, 0, 0.28);
+  width: max-content;
 }
 
 .registro-table {
-  width: 100%;
-  min-width: 980px;
+  width: max-content;
+  min-width: 1120px;
   border-collapse: collapse;
-  table-layout: fixed;
   background: #ffffff;
+}
+
+.registro-table th:first-child,
+.registro-table td:first-child {
+  min-width: 96px;
+}
+
+.registro-table th:nth-child(2),
+.registro-table td:nth-child(2) {
+  min-width: 110px;
+}
+
+.registro-table thead th:not(:first-child):not(:nth-child(2)):not(:last-child),
+.registro-table tbody td:not(:first-child):not(:nth-child(2)):not(:last-child) {
+  min-width: 116px;
 }
 
 .registro-table thead th {
@@ -1309,7 +1390,7 @@ body {
   z-index: 1;
   background: #07006d;
   color: var(--white);
-  padding: 8px 6px;
+  padding: 10px 10px;
   text-align: center;
   font-family: 'Barlow Condensed', sans-serif;
   font-size: 11px;
@@ -1320,32 +1401,46 @@ body {
 }
 
 .registro-table thead th span {
-  display: block;
   font-size: 12px;
 }
 
 .registro-table thead th .registro-team-label {
   align-items: center;
+  gap: 6px;
 }
 
 .registro-table thead th .registro-team-line {
+  display: flex;
+  flex-direction: column;
   gap: 3px;
-  font-size: 11px;
-  line-height: 1.25;
+  font-size: 12px;
+  line-height: 1.2;
+  min-height: 42px;
+  white-space: nowrap;
+  align-items: center;
+  justify-content: center;
 }
 
 .registro-table thead th .registro-team-logo {
-  width: 16px;
-  height: 16px;
-  flex-basis: 16px;
+  width: 18px;
+  height: 18px;
+  flex-basis: 18px;
 }
 
 .registro-table thead th small {
   display: block;
-  margin-top: 2px;
+  margin: 2px 0;
   color: rgba(255, 255, 255, 0.75);
   font-size: 9px;
   letter-spacing: 1px;
+}
+
+.registro-team-name-score {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  max-width: 100%;
 }
 
 .registro-table tbody td {
@@ -1979,13 +2074,14 @@ body {
   }
 
   .hero-inner {
-    flex-direction: column;
+    grid-template-columns: 1fr;
     gap: 12px;
   }
 
   .hero-prize,
   .hero-center,
   .hero-close {
+    grid-column: 1;
     width: 100%;
   }
 
@@ -2546,8 +2642,8 @@ body {
 
 .admin-content {
   flex: 1;
-  padding: 28px 24px;
-  max-width: 1400px;
+  padding: 28px 14px;
+  max-width: min(1680px, calc(100vw - 28px));
   margin: 0 auto;
   width: 100%;
 }
@@ -2788,8 +2884,42 @@ body {
 
 .icon-action {
   min-width: 34px;
-  padding: 8px 10px;
-  font-size: 14px;
+  width: 34px;
+  height: 30px;
+  padding: 0;
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+}
+
+.edit-icon-action {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.edit-icon-action::before {
+  content: '';
+  width: 16px;
+  height: 6px;
+  border-radius: 2px 0 0 2px;
+  background: #c8ccd2;
+  transform: rotate(-45deg);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.edit-icon-action::after {
+  content: '';
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 1px;
+  background: #f4f6f8;
+  transform: translate(6px, -6px) rotate(-45deg);
+}
+
+.edit-icon-action:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.22);
 }
 
 .filter-bar {
@@ -2850,7 +2980,7 @@ body {
 }
 
 .table-wrap {
-  overflow-x: auto;
+  overflow-x: hidden;
   border-radius: 8px;
   border: 1px solid var(--glass-border);
 }
@@ -2858,7 +2988,8 @@ body {
 .admin-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 900px;
+  table-layout: fixed;
+  min-width: 0;
 }
 
 .admin-table thead tr {
@@ -2866,12 +2997,12 @@ body {
 }
 
 .admin-table th {
-  padding: 11px 14px;
+  padding: 10px 8px;
   text-align: left;
   font-family: 'Barlow Condensed', sans-serif;
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 2px;
+  letter-spacing: 1px;
   text-transform: uppercase;
   color: var(--cyan);
   border-bottom: 1px solid var(--glass-border);
@@ -2879,8 +3010,8 @@ body {
 }
 
 .admin-table td {
-  padding: 11px 14px;
-  font-size: 13px;
+  padding: 10px 8px;
+  font-size: 12px;
   color: var(--gray-light);
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   vertical-align: middle;
@@ -2932,8 +3063,66 @@ body {
 
 .picks-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 3px;
+  width: max-content;
+  white-space: nowrap;
+}
+
+.admin-table th:nth-child(5),
+.admin-table td:nth-child(5) {
+  width: 286px;
+}
+
+.admin-table th:nth-child(1),
+.admin-table td:nth-child(1) {
+  width: 78px;
+}
+
+.admin-table th:nth-child(2),
+.admin-table td:nth-child(2) {
+  width: 78px;
+}
+
+.admin-table th:nth-child(3),
+.admin-table td:nth-child(3) {
+  width: 88px;
+}
+
+.admin-table th:nth-child(4),
+.admin-table td:nth-child(4) {
+  width: 78px;
+}
+
+.admin-table th:nth-child(6),
+.admin-table td:nth-child(6),
+.admin-table th:nth-child(7),
+.admin-table td:nth-child(7),
+.admin-table th:nth-child(8),
+.admin-table td:nth-child(8) {
+  width: 56px;
+}
+
+.admin-table th:nth-child(9),
+.admin-table td:nth-child(9) {
+  width: 98px;
+}
+
+.admin-table th:nth-child(10),
+.admin-table td:nth-child(10) {
+  width: 112px;
+}
+
+.admin-table th:nth-child(11),
+.admin-table td:nth-child(11),
+.admin-table th:nth-child(12),
+.admin-table td:nth-child(12) {
+  width: 94px;
+}
+
+.admin-table th:nth-child(13),
+.admin-table td:nth-child(13) {
+  width: 156px;
 }
 
 #admin-shell .pick-chip-sm {
@@ -2990,6 +3179,11 @@ body {
   border: 1.5px solid transparent;
   transition: all 0.15s;
   white-space: nowrap;
+}
+
+.admin-table .act-btn {
+  padding: 5px 8px;
+  font-size: 11px;
 }
 
 .act-btn.accept {
@@ -3056,6 +3250,26 @@ body {
   display: grid;
   grid-template-columns: 1fr 340px;
   gap: 20px;
+}
+
+.create-grid.matches-modal-layout {
+  grid-template-columns: 1fr;
+}
+
+.register-panel.match-side-panel-hidden {
+  display: none;
+}
+
+.team-suggest-field {
+  position: relative;
+}
+
+.modal-import-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.modal-import-preview {
+  max-height: 280px;
 }
 
 .matches-create-wrap {
@@ -3913,6 +4127,10 @@ select.rp-input option {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
+}
+
+.modal-field-full {
+  grid-column: 1 / -1;
 }
 
 .jornada-modal-grid {
