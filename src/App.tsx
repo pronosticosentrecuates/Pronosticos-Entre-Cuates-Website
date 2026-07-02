@@ -43,7 +43,7 @@ import {
   updateQuinielaPrize,
   updateQuinielaStatus,
 } from './services/quinielas'
-import type { Jornada, JornadaStatus, PaymentStatus, PublicStats, QuinielaStatus, SavedQuiniela, Tournament, TournamentStatus } from './types'
+import type { Jornada, JornadaStatus, PaymentStatus, QuinielaStatus, SavedQuiniela, Tournament, TournamentStatus } from './types'
 import { getSupabase } from '../utils/supabase'
 
 type AppView = 'home' | 'registro' | 'admin'
@@ -140,6 +140,32 @@ function normalizeLigaMxTeamName(teamName: string) {
   return LIGA_MX_TEAM_ALIASES[teamName] ?? teamName
 }
 
+const REGISTRO_TEAM_SHORT_NAMES: Record<string, string> = {
+  'arabia saudita': 'Arabia S.',
+  'bosnia y herzegovina': 'Bosnia-H.',
+  'corea del sur': 'Corea Sur',
+  'costa de marfil': 'C. Marfil',
+  'emiratos arabes unidos': 'EAU',
+  'estados unidos': 'EE. UU.',
+  'guinea ecuatorial': 'G. Ecuatorial',
+  'nueva zelanda': 'N. Zelanda',
+  'republica checa': 'R. Checa',
+  'republica democratica del congo': 'R. D. Congo',
+  'trinidad y tobago': 'T. y Tobago',
+}
+
+function normalizeTeamNameKey(teamName: string) {
+  return teamName
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .trim()
+    .toLowerCase()
+}
+
+function formatRegistroTeamName(teamName: string) {
+  return REGISTRO_TEAM_SHORT_NAMES[normalizeTeamNameKey(teamName)] ?? teamName
+}
+
 function getLigaMxMatchTimeOverride(season: string, round: string, homeTeam: string, awayTeam: string) {
   return LIGA_MX_MATCH_TIME_OVERRIDES[`${season}|${round}|${normalizeLigaMxTeamName(homeTeam)}|${normalizeLigaMxTeamName(awayTeam)}`]
 }
@@ -188,10 +214,14 @@ function formatSelection(selection: MatchSelection) {
   return selection.seleccion.length > 0 ? selection.seleccion.join('/') : '—'
 }
 
+function getTeamLogoSource(teamName: string) {
+  const normalizedTeamName = teamName.trim().toLowerCase()
+  return TEAM_LOGOS[teamName] ?? Object.entries(TEAM_LOGOS).find(([name]) => name.trim().toLowerCase() === normalizedTeamName)?.[1]
+}
+
 function TeamLogo({ teamName, fallback, className }: { teamName: string; fallback: string; className: string }) {
   const [failed, setFailed] = useState(false)
-  const normalizedTeamName = teamName.trim().toLowerCase()
-  const logoSource = TEAM_LOGOS[teamName] ?? Object.entries(TEAM_LOGOS).find(([name]) => name.trim().toLowerCase() === normalizedTeamName)?.[1]
+  const logoSource = getTeamLogoSource(teamName)
 
   if (failed || !logoSource) {
     return <span className={`team-logo-emoji ${className}`}>{fallback}</span>
@@ -321,7 +351,6 @@ function App() {
   const [now, setNow] = useState(() => Date.now())
   const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [jornadas, setJornadas] = useState<Jornada[]>([])
-  const [publicStats, setPublicStats] = useState<PublicStats>({ registered: 0, accepted: 0, pool: 0 })
   const [publicApprovedQuinielas, setPublicApprovedQuinielas] = useState<SavedQuiniela[]>([])
   const [draftQuinielas, setDraftQuinielas] = useState<SavedQuiniela[]>([])
   const [dataLoading, setDataLoading] = useState(true)
@@ -468,7 +497,6 @@ function App() {
         const dashboard = await loadPublicDashboard()
         setMatches(dashboard.matches)
         setJornada(dashboard.jornada)
-        setPublicStats(dashboard.stats)
         const dashboardJornadaId = dashboard.jornada?.id ?? null
         setPublicApprovedQuinielas(dashboardJornadaId ? await loadApprovedQuinielas(dashboardJornadaId).catch((error) => {
           console.error('Error cargando quinielas aprobadas publicas:', error)
@@ -550,7 +578,6 @@ function App() {
       const dashboard = await loadPublicDashboard()
       setMatches(dashboard.matches)
       setJornada(dashboard.jornada)
-      setPublicStats(dashboard.stats)
       const dashboardJornadaId = dashboard.jornada?.id ?? null
       const approvedQuinielas = dashboardJornadaId ? await loadApprovedQuinielas(dashboardJornadaId).catch((error) => {
         console.error('Error cargando quinielas aprobadas publicas:', error)
@@ -1416,11 +1443,239 @@ function App() {
     return 'Pendiente'
   }
 
-  const renderRegistroTable = (rows: SavedQuiniela[], showStatus = false) => (
+  const escapePdfText = (value: string | number | null | undefined) => {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;')
+  }
+
+  const exportRegistroPdf = () => {
+    if (registroRankingRows.length === 0) {
+      window.alert('No hay quinielas para exportar con los filtros actuales.')
+      return
+    }
+
+    const tableWrap = document.querySelector('.registro-card .registro-table-wrap')
+    const clonedTableWrap = tableWrap?.cloneNode(true) as HTMLElement | null
+
+    if (!clonedTableWrap) {
+      window.alert('No se encontro la tabla para exportar.')
+      return
+    }
+
+    const pdfWindow = window.open('', '_blank')
+
+    if (!pdfWindow) {
+      window.alert('Permite las ventanas emergentes para exportar la tabla como PDF.')
+      return
+    }
+
+    pdfWindow.document.write(`
+      <!doctype html>
+      <html lang="es">
+        <head>
+          <meta charset="utf-8" />
+          <title>Quinielas registradas ${escapePdfText(jornadaTitle)}</title>
+          <style>
+            @page { size: landscape; margin: 10mm; }
+            *,
+            *::before,
+            *::after {
+              box-sizing: border-box;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            html,
+            body {
+              margin: 0;
+              padding: 0;
+              background: #ffffff !important;
+              color: #050505;
+              font-family: Arial, Helvetica, sans-serif;
+            }
+            .registro-table-wrap {
+              overflow: visible;
+              border-radius: 10px;
+              border: 1px solid rgba(0, 0, 0, 0.75);
+              background: #f4f7fb !important;
+              box-shadow: none;
+              width: max-content;
+            }
+            .registro-table {
+              width: max-content;
+              min-width: 1120px;
+              border-collapse: collapse;
+              background: #ffffff !important;
+            }
+            .registro-table th:first-child,
+            .registro-table td:first-child {
+              min-width: 96px;
+            }
+            .registro-table th:nth-child(2),
+            .registro-table td:nth-child(2) {
+              min-width: 110px;
+            }
+            .registro-table thead th:not(:first-child):not(:nth-child(2)):not(:last-child),
+            .registro-table tbody td:not(:first-child):not(:nth-child(2)):not(:last-child) {
+              min-width: 116px;
+            }
+            .registro-table thead th {
+              position: static;
+              top: 0;
+              z-index: 1;
+              background: #07006d !important;
+              color: #ffffff !important;
+              padding: 10px 10px;
+              text-align: center;
+              font-family: 'Barlow Condensed', Arial, Helvetica, sans-serif;
+              font-size: 11px;
+              letter-spacing: 1.5px;
+              text-transform: uppercase;
+              border: 1px solid #101010;
+              vertical-align: middle;
+            }
+            .registro-table thead th span {
+              font-size: 12px;
+            }
+            .registro-table thead th .registro-team-label {
+              align-items: center;
+              gap: 6px;
+            }
+            .registro-table thead th .registro-team-line {
+              display: flex;
+              flex-direction: column;
+              gap: 3px;
+              font-size: 12px;
+              line-height: 1.2;
+              min-height: 42px;
+              white-space: nowrap;
+              align-items: center;
+              justify-content: center;
+            }
+            .registro-table thead th .registro-team-logo {
+              width: 18px;
+              height: 18px;
+              flex-basis: 18px;
+              object-fit: contain;
+            }
+            .registro-table thead th small {
+              display: block;
+              margin: 2px 0;
+              color: rgba(255, 255, 255, 0.75) !important;
+              font-size: 9px;
+              letter-spacing: 1px;
+            }
+            .registro-team-name-score {
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              gap: 4px;
+              max-width: 100%;
+            }
+            .registro-table tbody td {
+              padding: 8px 6px;
+              text-align: center;
+              border: 1px solid #101010;
+              color: #050505 !important;
+              font-size: 13px;
+              font-weight: 700;
+              vertical-align: middle;
+              background: #ffffff !important;
+            }
+            .registro-table tbody tr:nth-child(even) {
+              background: transparent;
+            }
+            .registro-table tbody td:nth-child(1),
+            .registro-table tbody td:nth-child(2) {
+              background: #f7f7f7 !important;
+            }
+            .registro-pick-cell.hit {
+              background: #10d678 !important;
+            }
+            .registro-pick-cell.miss,
+            .registro-pick-cell.empty {
+              background: #ffffff !important;
+              color: #111111 !important;
+            }
+            .registro-points-cell {
+              background: #fff200 !important;
+              color: #000000 !important;
+            }
+            .registro-pick {
+              display: block;
+              width: 100%;
+              min-width: 0;
+              height: auto;
+              padding: 0;
+              border-radius: 0;
+              font-family: inherit;
+              font-size: 13px;
+              letter-spacing: 0;
+              border: 0;
+              background: transparent !important;
+              color: inherit !important;
+              white-space: nowrap;
+            }
+          </style>
+        </head>
+        <body>
+          ${clonedTableWrap.outerHTML}
+          <script>
+            const printWhenReady = () => {
+              const images = Array.from(document.images);
+              const pendingImages = images.filter((image) => !image.complete);
+              if (pendingImages.length === 0) {
+                window.print();
+                return;
+              }
+              Promise.allSettled(pendingImages.map((image) => new Promise((resolve) => {
+                image.addEventListener('load', resolve, { once: true });
+                image.addEventListener('error', resolve, { once: true });
+              }))).then(() => window.print());
+            };
+            window.addEventListener('load', printWhenReady);
+          </script>
+        </body>
+      </html>
+    `)
+    pdfWindow.document.close()
+    pdfWindow.focus()
+    return
+  }
+
+
+  const renderRegistroTable = (rows: SavedQuiniela[], showStatus = false) => {
+    const leadingColumnSpan = showStatus ? 3 : 2
+    const trailingColumnSpan = showStatus ? 2 : 1
+    const tableColumnCount = leadingColumnSpan + registroMatches.length + trailingColumnSpan
+
+    return (
     <div className="registro-table-wrap">
       <table className="registro-table">
         <thead>
-          <tr>
+          <tr className="registro-mobile-title-row">
+            <th colSpan={tableColumnCount}>{jornadaTitle}</th>
+          </tr>
+          <tr className="registro-mobile-match-stack-row">
+            <th>ID</th>
+            <th>Nombre</th>
+            {showStatus ? <th>Tel.</th> : null}
+            {registroMatches.map((match) => (
+              <th className="registro-mobile-match-stack" key={`mobile-stack-${match.id}`}>
+                {renderTeamLogo(match.local, '⚽', 'registro-team-logo')}
+                <strong>{match.localScore ?? '-'}</strong>
+                <small>vs</small>
+                <strong>{match.visitanteScore ?? '-'}</strong>
+                {renderTeamLogo(match.visitante, '⚽', 'registro-team-logo')}
+              </th>
+            ))}
+            {showStatus ? <th>Estado</th> : null}
+            <th>Pts</th>
+          </tr>
+          <tr className="registro-desktop-head-row">
             <th>ID</th>
             <th>Nombre</th>
             {showStatus ? <th>Teléfono</th> : null}
@@ -1430,7 +1685,7 @@ function App() {
                   <span className="registro-team-line">
                     {renderTeamLogo(match.local, '⚽', 'registro-team-logo')}
                     <span className="registro-team-name-score">
-                      <span>{match.local}</span>
+                      <span title={match.local}>{formatRegistroTeamName(match.local)}</span>
                       <strong className="registro-team-score">{match.localScore ?? '-'}</strong>
                     </span>
                   </span>
@@ -1438,7 +1693,7 @@ function App() {
                   <span className="registro-team-line away">
                     {renderTeamLogo(match.visitante, '⚽', 'registro-team-logo')}
                     <span className="registro-team-name-score">
-                      <span>{match.visitante}</span>
+                      <span title={match.visitante}>{formatRegistroTeamName(match.visitante)}</span>
                       <strong className="registro-team-score">{match.visitanteScore ?? '-'}</strong>
                     </span>
                   </span>
@@ -1447,6 +1702,18 @@ function App() {
             ))}
             {showStatus ? <th>Estado</th> : null}
             <th>Puntos</th>
+          </tr>
+          <tr className="registro-mobile-pick-head-row">
+            <th>ID</th>
+            <th>Nombre</th>
+            {showStatus ? <th>Tel.</th> : null}
+            {registroMatches.map((match) => (
+              <th key={`mobile-pick-head-${match.id}`}>
+                {getMatchOutcome(match.localScore ?? null, match.visitanteScore ?? null) ?? '-'}
+              </th>
+            ))}
+            {showStatus ? <th>Estado</th> : null}
+            <th>Pts</th>
           </tr>
         </thead>
         <tbody>
@@ -1484,7 +1751,8 @@ function App() {
         </tbody>
       </table>
     </div>
-  )
+    )
+  }
 
   const handlePaymentChange = async (quiniela: SavedQuiniela, paymentStatus: PaymentStatus) => {
     if (paymentStatus === 'paid') {
@@ -1885,6 +2153,20 @@ function App() {
             Admin
           </button>
         </div>
+        <div className="topnav-social" aria-label="Redes sociales">
+          <button className="social-btn social-facebook" onClick={() => setNavOpen(false)} type="button">
+            <svg className="social-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M15.1 8.4h2.2V4.7c-.4-.1-1.7-.2-3.2-.2-3.2 0-5.4 1.9-5.4 5.4v3H5.3V17h3.4v7h4.2v-7h3.4l.5-4.1h-3.9v-2.6c0-1.2.3-1.9 2.2-1.9Z" />
+            </svg>
+            Facebook
+          </button>
+          <button className="social-btn social-whatsapp" onClick={() => setNavOpen(false)} type="button">
+            <svg className="social-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M12.1 2a9.8 9.8 0 0 0-8.4 14.9L2.5 22l5.3-1.2A9.9 9.9 0 1 0 12.1 2Zm0 2a7.9 7.9 0 1 1-3.9 14.8l-.4-.2-3 .7.7-2.9-.3-.5A7.8 7.8 0 0 1 12.1 4Zm-3.4 4.2c-.2 0-.5.1-.7.4-.2.3-.9.9-.9 2.1 0 1.3.9 2.5 1 2.7.1.2 1.8 2.8 4.4 3.8 2.2.9 2.7.7 3.2.6.5-.1 1.6-.7 1.8-1.3.2-.6.2-1.1.2-1.2-.1-.1-.2-.2-.5-.4l-1.7-.8c-.3-.1-.5-.1-.7.2l-.7.9c-.2.2-.4.2-.7.1-1-.4-1.9-.9-2.6-1.7-.6-.7-.9-1.2-1.1-1.6-.1-.3 0-.4.1-.6l.4-.5c.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5l-.8-1.8c-.2-.5-.4-.5-.6-.5h-.4Z" />
+            </svg>
+            WhatsApp
+          </button>
+        </div>
       </nav>
 
       {activeView === 'home' ? (
@@ -2155,9 +2437,11 @@ function App() {
                 <h2>Quinielas registradas {jornadaTitle}</h2>
                 <p>Vista tipo tabla para revisar cada captura sin salir del diseño principal.</p>
               </div>
-              <button className="registro-back" onClick={() => openView('home')} type="button">
-                Volver al inicio
-              </button>
+              <div className="registro-actions">
+                <button className="registro-export" disabled={registroRankingRows.length === 0} onClick={exportRegistroPdf} type="button">
+                  Exportar PDF
+                </button>
+              </div>
             </div>
 
             <div className="ranking-filters" aria-label="Filtros de quinielas registradas">
@@ -2420,7 +2704,7 @@ function App() {
                                   <div className="match-create-row" key={match.id}>
                                     <div className="mcr-num">{index + 1}</div>
 
-                                    {false && editingMatchId === match.id ? (
+                                    {editingMatchId === match.id ? (
                                       <div className="mcr-edit-layout">
                                         <div className="mcr-edit-catalog">
                                           {renderTeamCatalogToggle()}

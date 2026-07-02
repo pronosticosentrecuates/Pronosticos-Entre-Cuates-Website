@@ -26,6 +26,7 @@
   --glass: rgba(255, 255, 255, 0.06);
   /* Borde sutil de cristal */
   --glass-border: rgba(255, 255, 255, 0.12);
+  --page-gutter: clamp(24px, 4vw, 72px);
 }
 
 /* Reset básico: caja con border-box y quitar márgenes/paddings */
@@ -63,8 +64,9 @@ body {
 }
 
 .registro-shell {
-  width: max-content;
-  min-width: 100%;
+  width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .app-notice {
@@ -244,10 +246,6 @@ body {
   content: "\1F3C6";
 }
 
-.topnav-links .nav-link-btn:nth-of-type(4)::before {
-  content: "\1F510";
-}
-
 /* Hover para enlaces: acento cian */
 .topnav-links a:hover,
 .nav-link-btn:hover,
@@ -259,58 +257,57 @@ body {
 /* Contenedor de iconos sociales */
 .topnav-social {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   flex-direction: row;
-  justify-content: center;
+  justify-content: stretch;
   margin-top: auto;
   padding-top: 12px;
   border-top: 1px solid var(--glass-border);
 }
 
-/* Botones circulares para redes sociales */
+/* Botones para redes sociales */
 .topnav-social a,
 .social-btn {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 38px;
+  border-radius: 8px;
   background: var(--glass);
   border: 1px solid var(--glass-border);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  gap: 6px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
   text-decoration: none;
   color: var(--white);
-  transition: background 0.2s;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
   cursor: pointer;
 }
 
-.social-btn[title="WhatsApp"] {
-  overflow: hidden;
-  position: relative;
-  text-indent: -999px;
-}
-
-.social-btn[title="WhatsApp"]::before {
-  content: "\1F4AC";
-  display: grid;
-  place-items: center;
-  position: absolute;
-  inset: 0;
-  text-indent: 0;
+.social-icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  fill: currentColor;
 }
 
 /* Hover social: cambia a azul accent */
 .topnav-social a:hover,
 .social-btn:hover {
   background: var(--blue-accent);
+  border-color: rgba(0, 229, 255, 0.45);
+  color: var(--cyan);
 }
 
 /* Hero principal con degradado y borde cian */
 .hero {
   background: linear-gradient(135deg, #0a1628 0%, #1565c0 50%, #0a1628 100%);
   border-bottom: 2px solid var(--cyan);
-  padding: 28px 24px 20px;
+  padding: 28px var(--page-gutter) 20px;
   position: relative;
   overflow: hidden;
   text-align: center;
@@ -461,9 +458,9 @@ body {
 
 /* Contenedor principal en dos columnas */
 .main-container {
-  max-width: 1400px;
+  width: min(1400px, calc(100vw - var(--page-gutter) - var(--page-gutter)));
   margin: 28px auto;
-  padding: 0 16px;
+  padding: 0;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 24px;
@@ -1226,8 +1223,9 @@ body {
 
 /* Vista de registro al momento */
 .registro-view {
-  width: max-content;
-  min-width: min(1280px, calc(100vw - 32px));
+  box-sizing: border-box;
+  width: min(1720px, calc(100vw - var(--page-gutter) - var(--page-gutter)));
+  min-width: 0;
   margin: 28px auto 0;
   display: flex;
   flex-direction: column;
@@ -1302,10 +1300,12 @@ body {
   background: rgba(7, 16, 32, 0.72);
   border: 1px solid var(--glass-border);
   border-radius: 18px;
-  padding: 18px;
+  padding: 22px;
   box-shadow: 0 16px 34px rgba(0, 0, 0, 0.24);
-  width: max-content;
-  min-width: 100%;
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: visible;
 }
 
 .registro-card-head {
@@ -1329,6 +1329,15 @@ body {
   font-size: 14px;
 }
 
+.registro-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.registro-export,
 .registro-back {
   border: 1px solid rgba(0, 229, 255, 0.25);
   background: rgba(0, 229, 255, 0.08);
@@ -1339,6 +1348,20 @@ body {
   font-weight: 700;
   letter-spacing: 1px;
   cursor: pointer;
+}
+
+.registro-export {
+  border-color: rgba(255, 242, 0, 0.36);
+  background: rgba(255, 242, 0, 0.12);
+}
+
+.registro-export:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.registro-export:not(:disabled):hover {
+  background: rgba(255, 242, 0, 0.2);
 }
 
 .registro-back:hover {
@@ -1354,19 +1377,27 @@ body {
 }
 
 .registro-table-wrap {
-  overflow-x: visible;
+  overflow: visible;
   border-radius: 10px;
   border: 1px solid rgba(0, 0, 0, 0.75);
   background: #f4f7fb;
   box-shadow: 0 18px 34px rgba(0, 0, 0, 0.28);
-  width: max-content;
+  width: 100%;
+  min-width: 1120px;
 }
 
 .registro-table {
-  width: max-content;
+  width: 100%;
   min-width: 1120px;
   border-collapse: collapse;
   background: #ffffff;
+}
+
+.registro-mobile-title-row,
+.registro-mobile-match-row,
+.registro-mobile-match-stack-row,
+.registro-mobile-pick-head-row {
+  display: none;
 }
 
 .registro-table th:first-child,
@@ -1381,7 +1412,7 @@ body {
 
 .registro-table thead th:not(:first-child):not(:nth-child(2)):not(:last-child),
 .registro-table tbody td:not(:first-child):not(:nth-child(2)):not(:last-child) {
-  min-width: 116px;
+  min-width: 98px;
 }
 
 .registro-table thead th {
@@ -1390,7 +1421,7 @@ body {
   z-index: 1;
   background: #07006d;
   color: var(--white);
-  padding: 10px 10px;
+  padding: 9px 8px;
   text-align: center;
   font-family: 'Barlow Condensed', sans-serif;
   font-size: 11px;
@@ -1413,9 +1444,9 @@ body {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.2;
-  min-height: 42px;
+  min-height: 40px;
   white-space: nowrap;
   align-items: center;
   justify-content: center;
@@ -1441,6 +1472,13 @@ body {
   justify-content: center;
   gap: 4px;
   max-width: 100%;
+}
+
+.registro-team-name-score > span {
+  display: block;
+  max-width: 84px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .registro-table tbody td {
@@ -1575,7 +1613,7 @@ body {
 }
 
 .resultados-view {
-  width: min(1240px, calc(100% - 24px));
+  width: min(1240px, calc(100vw - var(--page-gutter) - var(--page-gutter)));
   margin: 24px auto 32px;
   display: grid;
   gap: 18px;
@@ -1806,8 +1844,12 @@ body {
 }
 
 @media (max-width: 900px) {
+  :root {
+    --page-gutter: 20px;
+  }
+
   .resultados-view {
-    width: min(100%, calc(100% - 20px));
+    width: min(100%, calc(100vw - var(--page-gutter) - var(--page-gutter)));
     margin-top: 18px;
   }
 
@@ -1826,16 +1868,38 @@ body {
 }
 
 @media (max-width: 900px) {
+  :root {
+    --page-gutter: 20px;
+  }
+
   .registro-card-head {
     flex-direction: column;
   }
 
   .registro-stats {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .registro-stats article {
+    border-radius: 10px;
+    padding: 10px 12px;
+    min-width: 0;
+  }
+
+  .registro-stats span {
+    font-size: 9px;
+    letter-spacing: 1.4px;
+    line-height: 1.15;
+  }
+
+  .registro-stats strong {
+    margin-top: 4px;
+    font-size: 28px;
   }
 
   .registro-view {
-    width: min(100%, calc(100% - 20px));
+    width: min(100%, calc(100vw - var(--page-gutter) - var(--page-gutter)));
     margin-top: 18px;
   }
 }
@@ -1954,6 +2018,10 @@ body {
 
 /* Adaptaciones para pantallas pequeñas */
 @media (max-width: 1024px) {
+  :root {
+    --page-gutter: 28px;
+  }
+
   .topnav {
     width: min(86vw, 280px);
     padding: 18px 14px;
@@ -1978,7 +2046,7 @@ body {
   }
 
   .hero {
-    padding: 22px 16px 18px;
+    padding: 22px var(--page-gutter) 18px;
   }
 
   .hero-inner {
@@ -2005,7 +2073,6 @@ body {
   .main-container {
     grid-template-columns: 1fr;
     gap: 20px;
-    padding: 0 12px;
     margin: 20px auto;
   }
 
@@ -2047,8 +2114,17 @@ body {
 }
 
 @media (max-width: 768px) {
+  :root {
+    --page-gutter: 16px;
+  }
+
   body {
     background-attachment: fixed;
+  }
+
+  .app-shell,
+  .registro-shell {
+    min-width: 0;
   }
 
   .topnav {
@@ -2126,7 +2202,6 @@ body {
   }
 
   .main-container {
-    padding: 0 10px;
     margin: 16px auto 24px;
     gap: 16px;
   }
@@ -2277,6 +2352,148 @@ body {
     flex-basis: 16px;
   }
 
+  .registro-table-wrap {
+    min-width: 0;
+    overflow-x: auto;
+    border-radius: 8px;
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.26);
+  }
+
+  .registro-table {
+    min-width: 760px;
+    width: max-content;
+    table-layout: fixed;
+  }
+
+  .registro-desktop-head-row {
+    display: none;
+  }
+
+  .registro-mobile-match-stack-row {
+    display: table-row;
+  }
+
+  .registro-mobile-title-row {
+    display: none;
+  }
+
+  .registro-mobile-pick-head-row {
+    display: none;
+  }
+
+  .registro-mobile-title-row th {
+    position: static;
+    padding: 5px 8px;
+    background: #07006d;
+    color: var(--white);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 20px;
+    line-height: 1;
+    letter-spacing: 0.8px;
+    text-align: center;
+  }
+
+  .registro-mobile-match-stack-row th {
+    position: static;
+    padding: 7px 4px;
+    background: #07006d;
+    color: var(--white);
+    border: 1px solid #101010;
+    vertical-align: middle;
+  }
+
+  .registro-mobile-match-stack-row th:first-child,
+  .registro-mobile-match-stack-row th:nth-child(2) {
+    font-size: 9px;
+    letter-spacing: 0.6px;
+  }
+
+  .registro-mobile-match-stack {
+    height: 86px;
+  }
+
+  .registro-mobile-match-stack .registro-team-logo {
+    display: block;
+    width: 19px;
+    height: 19px;
+    flex-basis: 19px;
+    margin: 0 auto 2px;
+  }
+
+  .registro-mobile-match-stack span,
+  .registro-mobile-match-stack strong,
+  .registro-mobile-match-stack small {
+    display: block;
+    font-family: 'Barlow Condensed', sans-serif;
+    line-height: 1;
+    text-align: center;
+  }
+
+  .registro-mobile-match-stack span {
+    max-width: 64px;
+    margin: 1px auto;
+    overflow: hidden;
+    color: var(--white);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .registro-mobile-match-stack strong {
+    font-size: 9px;
+    font-weight: 800;
+    color: var(--white);
+    margin: 2px 0;
+  }
+
+  .registro-mobile-match-stack small {
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0;
+    text-transform: uppercase;
+  }
+
+  .registro-mobile-pick-head-row th {
+    position: static;
+    padding: 5px 3px;
+    background: #07006d;
+    color: var(--white);
+    font-size: 10px;
+    letter-spacing: 0.4px;
+  }
+
+  .registro-table th:first-child,
+  .registro-table td:first-child {
+    min-width: 42px;
+    width: 42px;
+  }
+
+  .registro-table th:nth-child(2),
+  .registro-table td:nth-child(2) {
+    min-width: 72px;
+    width: 72px;
+  }
+
+  .registro-table thead th:not(:first-child):not(:nth-child(2)):not(:last-child),
+  .registro-table tbody td:not(:first-child):not(:nth-child(2)):not(:last-child) {
+    min-width: 64px;
+    width: 64px;
+  }
+
+  .registro-table tbody td {
+    padding: 6px 2px;
+    font-size: 11px;
+    line-height: 1.1;
+  }
+
+  .registro-pick {
+    font-size: 11px;
+  }
+
   .match-time-away {
     align-items: center;
   }
@@ -2322,6 +2539,49 @@ body {
   .btn-send {
     font-size: 20px;
     padding: 16px;
+  }
+
+  .registro-hero {
+    padding: 18px 14px;
+  }
+
+  .registro-hero h1 {
+    font-size: clamp(34px, 11vw, 44px);
+    overflow-wrap: anywhere;
+  }
+
+  .lookup-form {
+    grid-template-columns: 1fr;
+  }
+
+  .registro-card {
+    padding: 16px;
+  }
+
+  .registro-card-head h2 {
+    font-size: 22px;
+    overflow-wrap: anywhere;
+  }
+
+  .registro-actions {
+    width: 100%;
+  }
+
+  .registro-actions > * {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .ranking-filters {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .ranking-filters > * {
+    width: 100%;
+    min-width: 0;
   }
 
   .quinielas-list {
@@ -2642,8 +2902,8 @@ body {
 
 .admin-content {
   flex: 1;
-  padding: 28px 14px;
-  max-width: min(1680px, calc(100vw - 28px));
+  padding: 28px 0;
+  max-width: min(1680px, calc(100vw - var(--page-gutter) - var(--page-gutter)));
   margin: 0 auto;
   width: 100%;
 }
@@ -4342,7 +4602,7 @@ select.rp-input option {
   }
 
   .admin-content {
-    padding: 16px 12px;
+    padding: 16px 0;
   }
 
   .login-card {
