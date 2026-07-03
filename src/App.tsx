@@ -214,6 +214,22 @@ function formatSelection(selection: MatchSelection) {
   return selection.seleccion.length > 0 ? selection.seleccion.join('/') : '—'
 }
 
+function getStatusLabel(status: QuinielaStatus) {
+  if (status === 'accepted') return 'Aceptada'
+  if (status === 'cancelled') return 'Rechazada'
+  return 'Pendiente'
+}
+
+function getPaymentLabel(status?: PaymentStatus) {
+  if (status === 'paid') return 'Pagada'
+  if (status === 'refunded') return 'Reembolsada'
+  return 'Pendiente'
+}
+
+function getSelectionChipClass(selection: MatchSelection) {
+  return selection.seleccion.length >= 2 ? 'multi' : selection.seleccion[0] || 'empty'
+}
+
 function getTeamLogoSource(teamName: string) {
   const normalizedTeamName = teamName.trim().toLowerCase()
   return TEAM_LOGOS[teamName] ?? Object.entries(TEAM_LOGOS).find(([name]) => name.trim().toLowerCase() === normalizedTeamName)?.[1]
@@ -2537,30 +2553,122 @@ function App() {
                         <div className="section-head-actions">
                           <span className="badge-count">{filteredAdminQuinielas.length} registro{filteredAdminQuinielas.length !== 1 ? 's' : ''}</span>
                           <button className="act-btn save" onClick={openNewAdminQuiniela} type="button">Agregar Quiniela</button>
+                          <button className="act-btn admin-mobile-export" onClick={exportAdminCsv} type="button">Exportar CSV</button>
                         </div>
                       </div>
                       <div className="section-body">
                         <div className="filter-bar">
                           <input className="filter-input" placeholder="🔍 Buscar por nombre o celular…" value={adminSearch} onChange={(event) => setAdminSearch(event.target.value)} />
                           <select className="filter-select" value={adminStatusFilter} onChange={(event) => setAdminStatusFilter(event.target.value as 'all' | QuinielaStatus)}>
-                            <option value="all">Todos los estados</option>
+                            <option value="all">Estados</option>
                             <option value="pending">⏳ Pendiente</option>
                             <option value="accepted">✅ Aceptada</option>
                             <option value="cancelled">❌ Rechazada</option>
                           </select>
                           <select className="filter-select" value={adminModalFilter} onChange={(event) => setAdminModalFilter(event.target.value as 'all' | Modalidad)}>
-                            <option value="all">Todas las modalidades</option>
+                            <option value="all">Modalidades</option>
                             <option value="3 dobles">3 Dobles</option>
                             <option value="5 dobles">5 Dobles</option>
                           </select>
                           <select className="filter-select" value={adminPaymentFilter} onChange={(event) => setAdminPaymentFilter(event.target.value as 'all' | PaymentStatus)}>
-                            <option value="all">Todos los pagos</option>
+                            <option value="all">Pagos</option>
                             <option value="pending">Pago pendiente</option>
                             <option value="paid">Pagada</option>
                             <option value="refunded">Reembolsada</option>
                           </select>
-                          <button className="act-btn" onClick={exportAdminCsv} type="button">Exportar CSV</button>
+                          <button className="act-btn admin-filter-export" onClick={exportAdminCsv} type="button">Exportar CSV</button>
                         </div>
+                        {filteredAdminQuinielas.length === 0 ? (
+                          <div className="table-empty admin-quiniela-empty">
+                            <div className="empty-icon">Buscar</div>
+                            <p>No hay quinielas con ese filtro</p>
+                          </div>
+                        ) : (
+                          <div className="admin-quiniela-cards" aria-label="Quinielas registradas">
+                            {filteredAdminQuinielas.map((quiniela) => {
+                              const folio = quiniela.folio ?? `#${quiniela.id}`
+                              const paymentStatus = quiniela.paymentStatus ?? 'pending'
+                              const prizeAmount = quiniela.prizeAmount ?? 0
+                              const fechaRegistro = new Date(quiniela.fechaRegistro).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })
+
+                              return (
+                                <article className="admin-quiniela-card" key={quiniela.id}>
+                                  <div className="admin-quiniela-card-top">
+                                    <div className="admin-quiniela-card-title">
+                                      <span>{folio}</span>
+                                      <strong>{quiniela.nombre}</strong>
+                                    </div>
+                                    <span className={`admin-q-status ${quiniela.status}`}>
+                                      {getStatusLabel(quiniela.status)}
+                                    </span>
+                                  </div>
+
+                                  <div className="admin-quiniela-card-grid">
+                                    <div className="admin-q-field">
+                                      <span>Celular</span>
+                                      <strong>{quiniela.celular || '-'}</strong>
+                                    </div>
+                                    <div className="admin-q-field">
+                                      <span>Modalidad</span>
+                                      <strong>{quiniela.modalidad}</strong>
+                                    </div>
+                                    <div className="admin-q-field">
+                                      <span>Dobles / Combos</span>
+                                      <strong>{quiniela.doblesUsados} / {quiniela.combinaciones.length}</strong>
+                                    </div>
+                                    <div className="admin-q-field">
+                                      <span>Costo</span>
+                                      <strong className="admin-q-money">${quiniela.costo}</strong>
+                                    </div>
+                                    <div className="admin-q-field">
+                                      <span>Pago</span>
+                                      <button className={`admin-q-payment ${paymentStatus}`} onClick={() => handlePaymentChange(quiniela, paymentStatus === 'paid' ? 'pending' : 'paid')} type="button">
+                                        {getPaymentLabel(paymentStatus)}
+                                      </button>
+                                    </div>
+                                    <div className="admin-q-field">
+                                      <span>Premio</span>
+                                      <button className="admin-q-prize" onClick={() => handlePrize(quiniela)} type="button">
+                                        ${prizeAmount.toFixed(2)}
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  <div className="admin-q-selections">
+                                    <span>Selecciones</span>
+                                    <div className="admin-q-chips">
+                                      {quiniela.selecciones.map((selection, index) => (
+                                        <span className={`pick-chip-sm ${getSelectionChipClass(selection)}`} key={`${quiniela.id}-${index}`}>
+                                          {formatSelection(selection)}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+
+                                  <div className="admin-q-date">
+                                    <span aria-hidden="true">Reloj</span>
+                                    {fechaRegistro}
+                                  </div>
+
+                                  <div className="admin-q-actions">
+                                    {quiniela.status !== 'accepted' ? (
+                                      <button className="admin-q-action accept" onClick={() => openConfirm('accept', quiniela.id)} type="button">
+                                        Aceptar
+                                      </button>
+                                    ) : null}
+                                    {quiniela.status !== 'cancelled' ? (
+                                      <button className="admin-q-action reject" onClick={() => openConfirm('cancel', quiniela.id)} type="button">
+                                        Rechazar
+                                      </button>
+                                    ) : null}
+                                    <button className="admin-q-action icon-action edit-icon-action" onClick={() => startEditAdminQuiniela(quiniela)} type="button" title="Editar quiniela" aria-label={`Editar quiniela ${folio}`} />
+                                    <button className="admin-q-action delete" onClick={() => openConfirm('delete', quiniela.id)} type="button" title="Eliminar quiniela" aria-label={`Eliminar quiniela ${folio}`} />
+                                  </div>
+                                </article>
+                              )
+                            })}
+                          </div>
+                        )}
                         <div className="table-wrap">
                           <table className="admin-table">
                             <thead>
