@@ -3142,6 +3142,94 @@ body {
   flex-wrap: wrap;
 }
 
+#admin-shell .admin-quiniela-modal-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1.25fr) 86px 86px;
+  width: 100%;
+  gap: 8px;
+}
+
+#admin-shell .admin-quiniela-modal-actions .act-btn {
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: initial;
+  color: var(--white);
+  border-color: rgba(30, 136, 229, 0.32);
+  background: rgba(5, 18, 38, 0.34);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+#admin-shell .admin-quiniela-modal-actions .act-btn::before {
+  font-size: 17px;
+  line-height: 1;
+}
+
+#admin-shell .admin-quiniela-modal-actions .act-btn:nth-child(1)::before {
+  content: none;
+}
+
+#admin-shell .admin-quiniela-modal-actions .act-btn:nth-child(2)::before {
+  content: none;
+}
+
+#admin-shell .admin-quiniela-modal-actions .act-btn.cancel {
+  color: #ff7d8f !important;
+  border-color: rgba(244, 67, 54, 0.5) !important;
+  background: rgba(244, 67, 54, 0.12) !important;
+}
+
+#admin-shell .admin-quiniela-modal-actions .act-btn.cancel::before {
+  content: "\00d7";
+  color: #ff7d8f;
+  font-size: 22px;
+}
+
+#admin-shell .admin-quiniela-modal-actions .admin-modal-icon {
+  width: 100%;
+  padding: 0;
+  font-size: 13px;
+}
+
+#admin-shell .admin-quiniela-modal-actions .admin-modal-icon::before {
+  font-size: 17px;
+}
+
+#admin-shell .admin-quiniela-modal-actions .admin-modal-random::before {
+  content: "\270e";
+  color: #e8edf5;
+}
+
+#admin-shell .admin-quiniela-modal-actions .act-btn.delete {
+  color: #ff7d8f !important;
+  border-color: rgba(30, 136, 229, 0.32) !important;
+  background: rgba(5, 18, 38, 0.34) !important;
+}
+
+#admin-shell .admin-quiniela-modal-actions .act-btn.delete::before {
+  content: "\1F5D1";
+  color: #ff7d8f;
+  font-size: 16px;
+}
+
+#admin-shell .admin-quiniela-modal-actions .act-btn.save {
+  color: #00e676 !important;
+  border-color: rgba(0, 230, 118, 0.42) !important;
+  background: rgba(0, 230, 118, 0.08) !important;
+}
+
+#admin-shell .admin-quiniela-modal-actions .act-btn.save::before {
+  content: "\2713";
+  color: #00e676;
+  font-size: 22px;
+}
+
 .icon-action {
   min-width: 34px;
   width: 34px;
@@ -5531,6 +5619,75 @@ select.rp-input option {
     font-size: 16px;
   }
 
+  .jornada-item .acts-cell {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    gap: 8px;
+  }
+
+  .jornada-item .acts-cell .act-btn {
+    width: 100%;
+    min-width: 0;
+    height: 40px;
+    padding: 0 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--white);
+    border-color: rgba(30, 136, 229, 0.32);
+    background: rgba(5, 18, 38, 0.34);
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .jornada-item .acts-cell .act-btn::before {
+    font-size: 17px;
+    line-height: 1;
+  }
+
+  .jornada-item .acts-cell .act-btn:nth-of-type(1)::before {
+    content: "\270e";
+    color: #e8edf5;
+  }
+
+  .jornada-item .acts-cell .act-btn:nth-of-type(2)::before {
+    content: "\1F513";
+    font-size: 15px;
+  }
+
+  .jornada-item .acts-cell .act-btn:nth-of-type(4)::before {
+    content: "\0024";
+    color: var(--green);
+  }
+
+  .jornada-item .acts-cell .act-btn.accept {
+    color: var(--green);
+    border-color: rgba(0, 230, 118, 0.42);
+    background: rgba(0, 230, 118, 0.08);
+  }
+
+  .jornada-item .acts-cell .act-btn.accept::before {
+    content: "\2713";
+    font-size: 20px;
+  }
+
+  .jornada-item .acts-cell .act-btn.cancel,
+  .jornada-item .acts-cell .act-btn.delete {
+    color: #ff7d8f;
+  }
+
+  .jornada-item .acts-cell .act-btn.cancel::before {
+    content: "\00d7";
+    font-size: 22px;
+  }
+
+  .jornada-item .acts-cell .act-btn.delete::before {
+    content: "\1F5D1";
+    font-size: 16px;
+  }
+
   .tournament-item .status-badge,
   .jornada-item .status-badge {
     position: absolute;
@@ -5585,6 +5742,10 @@ select.rp-input option {
     text-align: left;
   }
 
+  .admin-quiniela-team.away .admin-quiniela-logo {
+    order: -1;
+  }
+
   .admin-quiniela-match .lev-group {
     justify-content: flex-start;
     overflow-x: auto;
@@ -5593,6 +5754,72 @@ select.rp-input option {
 
   .admin-quiniela-actions .act-btn {
     flex: 1 1 140px;
+  }
+
+  .admin-quiniela-modal-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    gap: 8px;
+  }
+
+  .admin-quiniela-modal-actions .act-btn {
+    width: 100%;
+    min-width: 0;
+    height: 40px;
+    padding: 0 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex: initial;
+    color: var(--white);
+    border-color: rgba(30, 136, 229, 0.32);
+    background: rgba(5, 18, 38, 0.34);
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .admin-quiniela-modal-actions .act-btn::before {
+    font-size: 17px;
+    line-height: 1;
+  }
+
+  .admin-quiniela-modal-actions .act-btn:nth-child(1)::before {
+    content: "\2726";
+    color: var(--cyan);
+  }
+
+  .admin-quiniela-modal-actions .act-btn:nth-child(2)::before {
+    content: "\21bb";
+    color: #8eb6e7;
+    font-size: 18px;
+  }
+
+  .admin-quiniela-modal-actions .act-btn.cancel,
+  .admin-quiniela-modal-actions .act-btn.delete {
+    color: #ff7d8f;
+  }
+
+  .admin-quiniela-modal-actions .act-btn.cancel::before {
+    content: "\00d7";
+    font-size: 22px;
+  }
+
+  .admin-quiniela-modal-actions .act-btn.delete::before {
+    content: "\1F5D1";
+    font-size: 16px;
+  }
+
+  .admin-quiniela-modal-actions .act-btn.save {
+    color: var(--green);
+    border-color: rgba(0, 230, 118, 0.42);
+    background: rgba(0, 230, 118, 0.08);
+  }
+
+  .admin-quiniela-modal-actions .act-btn.save::before {
+    content: "\2713";
+    font-size: 20px;
   }
 }
 
@@ -5638,4 +5865,135 @@ select.rp-input option {
   .jornada-item .acts-cell .act-btn {
     flex: 1 1 120px;
   }
+}
+
+#admin-shell .admin-quiniela-modal-actions .admin-modal-confirm {
+  color: #00e676 !important;
+  border-color: rgba(0, 230, 118, 0.42) !important;
+  background: rgba(0, 230, 118, 0.08) !important;
+}
+
+#admin-shell .admin-quiniela-modal-actions .admin-modal-confirm::before {
+  content: none !important;
+}
+
+#admin-shell .admin-quiniela-modal-actions .admin-modal-reject {
+  color: #ff7d8f !important;
+  border-color: rgba(244, 67, 54, 0.5) !important;
+  background: rgba(244, 67, 54, 0.12) !important;
+}
+
+#admin-shell .admin-quiniela-modal-actions .admin-modal-reject::before {
+  content: none !important;
+}
+
+#admin-shell .admin-quiniela-modal-actions .admin-modal-random {
+  color: var(--white) !important;
+  font-size: 13px !important;
+}
+
+#admin-shell .admin-quiniela-modal-actions .admin-modal-random::before {
+  content: none !important;
+}
+
+#admin-shell .admin-quiniela-modal-actions .admin-modal-clear {
+  color: #ff7d8f !important;
+  font-size: 13px !important;
+  border-color: rgba(30, 136, 229, 0.32) !important;
+  background: rgba(5, 18, 38, 0.34) !important;
+}
+
+#admin-shell .admin-quiniela-modal-actions .admin-modal-clear::before {
+  content: none !important;
+}
+
+#admin-shell .admin-quiniela-modal-actions .admin-modal-confirm::before,
+#admin-shell .admin-quiniela-modal-actions .admin-modal-reject::before,
+#admin-shell .admin-quiniela-modal-actions .admin-modal-random::before,
+#admin-shell .admin-quiniela-modal-actions .admin-modal-clear::before,
+#admin-shell .admin-quiniela-modal-actions .admin-modal-confirm::after,
+#admin-shell .admin-quiniela-modal-actions .admin-modal-reject::after,
+#admin-shell .admin-quiniela-modal-actions .admin-modal-random::after,
+#admin-shell .admin-quiniela-modal-actions .admin-modal-clear::after {
+  content: none !important;
+  display: none !important;
+}
+
+#admin-shell .admin-quiniela-modal-actions .admin-modal-action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  color: currentColor;
+  font-family: Arial, sans-serif;
+  font-size: 21px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+#admin-shell .admin-quiniela-modal-actions .admin-modal-confirm .admin-modal-action-icon {
+  color: #00e676 !important;
+}
+
+#admin-shell .admin-quiniela-modal-actions .admin-modal-reject .admin-modal-action-icon,
+#admin-shell .admin-quiniela-modal-actions .admin-modal-clear .admin-modal-action-icon {
+  color: #ff7d8f !important;
+}
+
+#admin-shell .admin-quiniela-modal-actions .admin-modal-random .admin-modal-action-icon {
+  color: #e8edf5 !important;
+  font-size: 18px;
+}
+
+.admin-quiniela-modal-actions .admin-modal-confirm::before,
+.admin-quiniela-modal-actions .admin-modal-reject::before,
+.admin-quiniela-modal-actions .admin-modal-random::before,
+.admin-quiniela-modal-actions .admin-modal-clear::before,
+.admin-quiniela-modal-actions .admin-modal-confirm::after,
+.admin-quiniela-modal-actions .admin-modal-reject::after,
+.admin-quiniela-modal-actions .admin-modal-random::after,
+.admin-quiniela-modal-actions .admin-modal-clear::after {
+  content: none !important;
+  display: none !important;
+}
+
+.admin-quiniela-modal-actions .admin-modal-confirm {
+  color: #00e676 !important;
+  border-color: rgba(0, 230, 118, 0.42) !important;
+  background: rgba(0, 230, 118, 0.08) !important;
+}
+
+.admin-quiniela-modal-actions .admin-modal-reject {
+  color: #ff7d8f !important;
+  border-color: rgba(244, 67, 54, 0.5) !important;
+  background: rgba(244, 67, 54, 0.12) !important;
+}
+
+.admin-quiniela-modal-actions .admin-modal-clear {
+  color: #ff7d8f !important;
+}
+
+.admin-quiniela-modal-actions .admin-modal-action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  font-family: Arial, sans-serif;
+  font-size: 21px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.admin-quiniela-modal-actions .admin-modal-confirm .admin-modal-action-icon {
+  color: #00e676 !important;
+}
+
+.admin-quiniela-modal-actions .admin-modal-reject .admin-modal-action-icon,
+.admin-quiniela-modal-actions .admin-modal-clear .admin-modal-action-icon {
+  color: #ff7d8f !important;
+}
+
+.admin-quiniela-modal-actions .admin-modal-random .admin-modal-action-icon {
+  color: #e8edf5 !important;
+  font-size: 18px;
 }

@@ -3655,17 +3655,27 @@ function App() {
                       )
                     })}
                   </div>
-                  <div className="admin-quiniela-actions">
-                    <button className="act-btn" onClick={randomAdminQuiniela} type="button">Aleatorio</button>
-                    <button className="act-btn delete" onClick={clearAdminQuinielaForm} type="button">Limpiar</button>
-                    <button className="act-btn cancel" onClick={closeAdminQuinielaModal} type="button">Cancelar</button>
+                  <div className="admin-quiniela-actions admin-quiniela-modal-actions">
                     <button
-                      className="act-btn save"
+                      className="act-btn save admin-modal-confirm"
                       disabled={savingAdminQuiniela || !adminQuinielaCompleta || !adminQuinielaNombreValido || !adminQuinielaCelularValido || adminQuinielaDobles > adminQuinielaMaxDobles}
                       onClick={saveAdminQuiniela}
                       type="button"
                     >
-                      {savingAdminQuiniela ? 'Guardando...' : adminEditQuinielaId ? 'Guardar cambios' : 'Crear quiniela'}
+                      <span className="admin-modal-action-icon">✓</span>
+                      <span>{savingAdminQuiniela ? 'Guardando...' : adminEditQuinielaId ? 'Guardar cambios' : 'Crear quiniela'}</span>
+                    </button>
+                    <button className="act-btn cancel admin-modal-reject" onClick={closeAdminQuinielaModal} type="button">
+                      <span className="admin-modal-action-icon">×</span>
+                      <span>Cancelar</span>
+                    </button>
+                    <button className="act-btn admin-modal-icon admin-modal-random" onClick={randomAdminQuiniela} type="button" title="Aleatorio" aria-label="Aleatorio">
+                      <span className="admin-modal-action-icon">✎</span>
+                      <span>Aleatorio</span>
+                    </button>
+                    <button className="act-btn delete admin-modal-icon admin-modal-clear" onClick={clearAdminQuinielaForm} type="button" title="Limpiar" aria-label="Limpiar">
+                      <span className="admin-modal-action-icon">🗑</span>
+                      <span>Limpiar</span>
                     </button>
                   </div>
                 </div>
