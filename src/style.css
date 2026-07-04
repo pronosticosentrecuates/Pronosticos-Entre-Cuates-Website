@@ -3750,8 +3750,9 @@ body {
 }
 
 .admin-q-action {
-  min-height: 38px;
-  padding: 8px 12px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0 12px;
   border-radius: 7px;
   border: 1px solid rgba(30, 136, 229, 0.25);
   background: rgba(5, 18, 38, 0.24);
@@ -5126,8 +5127,9 @@ select.rp-input option {
   }
 
   #tab-create .section-head-actions .ca-btn {
-    min-height: 48px;
-    padding: 10px 8px;
+    min-height: 40px;
+    height: 40px;
+    padding: 0 8px;
     font-size: 13px;
     text-align: center;
   }
@@ -5148,6 +5150,15 @@ select.rp-input option {
     align-items: center;
     justify-content: center;
     text-align: center;
+    height: 40px;
+    min-height: 40px;
+    padding: 0 8px;
+  }
+
+  #tab-quinielas .section-head-actions .act-btn:not(.admin-mobile-export) {
+    height: 40px;
+    min-height: 40px;
+    padding: 0 8px;
   }
 
   #tab-quinielas .admin-filter-export {
@@ -5379,7 +5390,7 @@ select.rp-input option {
     color: var(--white);
     width: 100%;
     min-width: 0;
-    height: 46px;
+    height: 40px;
     padding: 0 12px;
     display: inline-flex;
     align-items: center;
@@ -5458,11 +5469,78 @@ select.rp-input option {
   .jornada-item {
     align-items: flex-start;
     flex-direction: column;
+    position: relative;
+    padding-top: 28px;
   }
 
   .tournament-item .acts-cell,
   .jornada-item .acts-cell {
     justify-content: flex-start;
+  }
+
+  .tournament-item .acts-cell {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+    gap: 8px;
+  }
+
+  .tournament-item .acts-cell .act-btn {
+    width: 100%;
+    min-width: 0;
+    height: 40px;
+    padding: 0 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--white);
+    border-color: rgba(30, 136, 229, 0.32);
+    background: rgba(5, 18, 38, 0.34);
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .tournament-item .acts-cell .act-btn::before {
+    font-size: 17px;
+    line-height: 1;
+  }
+
+  .tournament-item .acts-cell .act-btn:first-of-type::before {
+    content: "\270e";
+    color: #e8edf5;
+  }
+
+  .tournament-item .acts-cell .act-btn.accept {
+    color: var(--green);
+    border-color: rgba(0, 230, 118, 0.42);
+    background: rgba(0, 230, 118, 0.08);
+  }
+
+  .tournament-item .acts-cell .act-btn.accept::before {
+    content: "\2713";
+    font-size: 20px;
+  }
+
+  .tournament-item .acts-cell .act-btn.delete {
+    color: #ff7d8f;
+  }
+
+  .tournament-item .acts-cell .act-btn.delete::before {
+    content: "\1F5D1";
+    font-size: 16px;
+  }
+
+  .tournament-item .status-badge,
+  .jornada-item .status-badge {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+  }
+
+  .tournament-item > div:first-child,
+  .jornada-item > div:first-child {
+    padding-right: 82px;
   }
 
   .modal-overlay:has(.admin-form-modal),
