@@ -5121,6 +5121,28 @@ select.rp-input option {
     width: 100%;
   }
 
+  #tab-create .section-head-actions .ca-btn.save {
+    grid-column: auto;
+  }
+
+  #tab-create .section-head-actions .ca-btn {
+    min-height: 48px;
+    padding: 10px 8px;
+    font-size: 13px;
+    text-align: center;
+  }
+
+  #tab-jornadas .section-head-actions .ca-btn.save {
+    grid-column: auto;
+  }
+
+  #tab-jornadas .section-head-actions .ca-btn {
+    min-height: 48px;
+    padding: 10px 8px;
+    font-size: 13px;
+    text-align: center;
+  }
+
   #tab-quinielas .admin-mobile-export {
     display: inline-flex;
     align-items: center;
@@ -5302,13 +5324,14 @@ select.rp-input option {
   .match-create-row {
     display: grid;
     grid-template-columns: 28px minmax(0, 1fr);
-    align-items: start;
+    align-items: center;
     gap: 8px 10px;
     padding: 12px;
   }
 
   .match-create-row .mcr-num {
-    grid-row: 1 / span 3;
+    grid-row: 1;
+    align-self: center;
   }
 
   .match-create-row .mcr-teams,
@@ -5318,11 +5341,18 @@ select.rp-input option {
     grid-column: 2;
   }
 
+  .match-create-row .mcr-time:not(.edit) {
+    width: fit-content;
+    justify-self: center;
+  }
+
   .mcr-teams {
     min-width: 0;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
+    justify-content: center;
+    text-align: center;
     gap: 6px;
     line-height: 1.35;
   }
@@ -5335,6 +5365,66 @@ select.rp-input option {
 
   #admin-shell .mcr-actions {
     justify-content: flex-start;
+  }
+
+  #admin-shell .match-create-row .mcr-actions {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    gap: 10px;
+    justify-content: stretch;
+  }
+
+  #admin-shell .match-create-row .mcr-actions .match-icon-btn {
+    color: var(--white);
+    width: 100%;
+    min-width: 0;
+    height: 46px;
+    padding: 0 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex: initial !important;
+    position: relative;
+    overflow: hidden;
+    text-indent: 0;
+    border-color: rgba(30, 136, 229, 0.28);
+    background: rgba(5, 18, 38, 0.28);
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  #admin-shell .match-create-row .mcr-actions .match-icon-btn::before,
+  #admin-shell .match-create-row .mcr-actions .match-icon-btn::after {
+    text-indent: 0;
+  }
+
+  #admin-shell .match-create-row .mcr-actions .edit-icon-action.match-icon-btn::before {
+    content: "\270e";
+    width: auto;
+    height: auto;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: #e8edf5;
+    font-size: 17px;
+    line-height: 1;
+    transform: none;
+  }
+
+  #admin-shell .match-create-row .mcr-actions .edit-icon-action.match-icon-btn::after {
+    content: none;
+  }
+
+  #admin-shell .match-create-row .mcr-actions .match-delete-icon {
+    color: #ff7d8f;
+  }
+
+  #admin-shell .match-create-row .mcr-actions .match-delete-icon::before {
+    content: "\1F5D1";
+    font-size: 16px;
+    line-height: 1;
   }
 
   .mcr-teams-edit,

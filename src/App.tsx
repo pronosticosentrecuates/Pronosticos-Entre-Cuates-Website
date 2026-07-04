@@ -2941,8 +2941,8 @@ function App() {
                                         </div>
                                         <div className={`mcr-time ${match.timeClass === 'dom' ? 'dom' : 'sab'}`}>{formatMatchTime(match.time)}</div>
                                         <div className="mcr-actions">
-                                          <button className="act-btn" onClick={() => startEditMatch(match)} type="button">Editar</button>
-                                          <button className="act-btn delete" onClick={() => deleteMatch(match.id)} type="button">Eliminar</button>
+                                          <button className="act-btn icon-action edit-icon-action match-icon-btn" onClick={() => startEditMatch(match)} type="button" title="Editar partido" aria-label={`Editar partido ${match.local} vs ${match.visitante}`}>Editar</button>
+                                          <button className="act-btn delete match-icon-btn match-delete-icon" onClick={() => deleteMatch(match.id)} type="button" title="Eliminar partido" aria-label={`Eliminar partido ${match.local} vs ${match.visitante}`}>Eliminar</button>
                                         </div>
                                       </>
                                     )}
