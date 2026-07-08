@@ -140,32 +140,6 @@ function normalizeLigaMxTeamName(teamName: string) {
   return LIGA_MX_TEAM_ALIASES[teamName] ?? teamName
 }
 
-const REGISTRO_TEAM_SHORT_NAMES: Record<string, string> = {
-  'arabia saudita': 'Arabia S.',
-  'bosnia y herzegovina': 'Bosnia-H.',
-  'corea del sur': 'Corea Sur',
-  'costa de marfil': 'C. Marfil',
-  'emiratos arabes unidos': 'EAU',
-  'estados unidos': 'EE. UU.',
-  'guinea ecuatorial': 'G. Ecuatorial',
-  'nueva zelanda': 'N. Zelanda',
-  'republica checa': 'R. Checa',
-  'republica democratica del congo': 'R. D. Congo',
-  'trinidad y tobago': 'T. y Tobago',
-}
-
-function normalizeTeamNameKey(teamName: string) {
-  return teamName
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .trim()
-    .toLowerCase()
-}
-
-function formatRegistroTeamName(teamName: string) {
-  return REGISTRO_TEAM_SHORT_NAMES[normalizeTeamNameKey(teamName)] ?? teamName
-}
-
 function getLigaMxMatchTimeOverride(season: string, round: string, homeTeam: string, awayTeam: string) {
   return LIGA_MX_MATCH_TIME_OVERRIDES[`${season}|${round}|${normalizeLigaMxTeamName(homeTeam)}|${normalizeLigaMxTeamName(awayTeam)}`]
 }
@@ -479,11 +453,9 @@ function App() {
   const nextId = useRef(1)
   const isJornadaOpenBySchedule = useCallback((item: Jornada | null | undefined) => {
     if (!item) return false
-    const openedByStatus = item.status === 'open'
-    const openedByDate = item.status === 'draft' && item.openAt !== null && now >= new Date(item.openAt).getTime()
     const closedByDate = item.closeAt !== null && now >= new Date(item.closeAt).getTime()
 
-    return (openedByStatus || openedByDate) && item.status !== 'closed' && item.status !== 'finished' && !closedByDate
+    return item.status === 'open' && !closedByDate
   }, [now])
   const activeTournaments = useMemo(() => tournaments.filter((item) => item.status !== 'finished'), [tournaments])
   const defaultTournament = activeTournaments[0] ?? tournaments[0] ?? null
@@ -1676,11 +1648,11 @@ function App() {
             <th colSpan={tableColumnCount}>{jornadaTitle}</th>
           </tr>
           <tr className="registro-mobile-match-stack-row">
-            <th>ID</th>
-            <th>Nombre</th>
-            {showStatus ? <th>Tel.</th> : null}
+            <th className="registro-id-col">ID</th>
+            <th className="registro-name-col">Nombre</th>
+            {showStatus ? <th className="registro-phone-col">Tel.</th> : null}
             {registroMatches.map((match) => (
-              <th className="registro-mobile-match-stack" key={`mobile-stack-${match.id}`}>
+              <th className="registro-match-col registro-mobile-match-stack" key={`mobile-stack-${match.id}`}>
                 {renderTeamLogo(match.local, '⚽', 'registro-team-logo')}
                 <strong>{match.localScore ?? '-'}</strong>
                 <small>vs</small>
@@ -1688,56 +1660,54 @@ function App() {
                 {renderTeamLogo(match.visitante, '⚽', 'registro-team-logo')}
               </th>
             ))}
-            {showStatus ? <th>Estado</th> : null}
-            <th>Pts</th>
+            {showStatus ? <th className="registro-status-col">Estado</th> : null}
+            <th className="registro-points-col">Pts</th>
           </tr>
           <tr className="registro-desktop-head-row">
-            <th>ID</th>
-            <th>Nombre</th>
+            <th className="registro-id-col">ID</th>
+            <th className="registro-name-col">Nombre</th>
             {showStatus ? <th>Teléfono</th> : null}
             {registroMatches.map((match) => (
-              <th key={match.id}>
+              <th className="registro-match-col" key={match.id}>
                 <span className="registro-team-label">
-                  <span className="registro-team-line">
+                  <span className="registro-team-line" title={match.local}>
                     {renderTeamLogo(match.local, '⚽', 'registro-team-logo')}
                     <span className="registro-team-name-score">
-                      <span title={match.local}>{formatRegistroTeamName(match.local)}</span>
                       <strong className="registro-team-score">{match.localScore ?? '-'}</strong>
                     </span>
                   </span>
                   <small>vs</small>
-                  <span className="registro-team-line away">
+                  <span className="registro-team-line away" title={match.visitante}>
                     {renderTeamLogo(match.visitante, '⚽', 'registro-team-logo')}
                     <span className="registro-team-name-score">
-                      <span title={match.visitante}>{formatRegistroTeamName(match.visitante)}</span>
                       <strong className="registro-team-score">{match.visitanteScore ?? '-'}</strong>
                     </span>
                   </span>
                 </span>
               </th>
             ))}
-            {showStatus ? <th>Estado</th> : null}
-            <th>Puntos</th>
+            {showStatus ? <th className="registro-status-col">Estado</th> : null}
+            <th className="registro-points-col">Puntos</th>
           </tr>
           <tr className="registro-mobile-pick-head-row">
-            <th>ID</th>
-            <th>Nombre</th>
-            {showStatus ? <th>Tel.</th> : null}
+            <th className="registro-id-col">ID</th>
+            <th className="registro-name-col">Nombre</th>
+            {showStatus ? <th className="registro-phone-col">Tel.</th> : null}
             {registroMatches.map((match) => (
-              <th key={`mobile-pick-head-${match.id}`}>
+              <th className="registro-match-col" key={`mobile-pick-head-${match.id}`}>
                 {getMatchOutcome(match.localScore ?? null, match.visitanteScore ?? null) ?? '-'}
               </th>
             ))}
-            {showStatus ? <th>Estado</th> : null}
-            <th>Pts</th>
+            {showStatus ? <th className="registro-status-col">Estado</th> : null}
+            <th className="registro-points-col">Pts</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((quiniela) => (
             <tr key={quiniela.id}>
-              <td>{quiniela.folio ?? quiniela.id}</td>
-              <td>{quiniela.nombre}</td>
-              {showStatus ? <td>{quiniela.celular || '-'}</td> : null}
+              <td className="registro-id-col">{quiniela.folio ?? quiniela.id}</td>
+              <td className="registro-name-col">{quiniela.nombre}</td>
+              {showStatus ? <td className="registro-phone-col">{quiniela.celular || '-'}</td> : null}
               {registroMatches.map((match) => {
                 const selection = quiniela.selecciones.find((item) => item.partidoId === match.id)
                 const picks = selection?.seleccion ?? []
@@ -1745,7 +1715,7 @@ function App() {
                 const pickCellState = outcome && picks.includes(outcome) ? 'hit' : picks.length > 0 ? 'miss' : 'empty'
 
                 return (
-                  <td className={`registro-pick-cell ${pickCellState}`} key={`${quiniela.id}-${match.id}`}>
+                  <td className={`registro-match-col registro-pick-cell ${pickCellState}`} key={`${quiniela.id}-${match.id}`}>
                     <span className={`registro-pick ${picks.length >= 2 ? 'multi' : picks[0] || 'empty'}`}>
                       {selection ? formatSelection(selection) : '—'}
                     </span>
@@ -1753,13 +1723,13 @@ function App() {
                 )
               })}
               {showStatus ? (
-                <td>
+                <td className="registro-status-col">
                   <span className={`registro-status ${quiniela.status}`}>
                     {formatQuinielaStatus(quiniela.status)}
                   </span>
                 </td>
               ) : null}
-              <td className="registro-points-cell">
+              <td className="registro-points-col registro-points-cell">
                 <strong>{countQuinielaPoints(quiniela, registroMatches)}</strong>
               </td>
             </tr>
@@ -1992,7 +1962,7 @@ function App() {
     try {
       await updateJornada(item.id, { status })
       await refreshQuinielas()
-      setToast({ message: 'Estado de jornada actualizado.', kind: 'success' })
+      setToast({ message: status === 'open' ? 'Jornada publicada.' : 'Estado de jornada actualizado.', kind: 'success' })
     } catch (error) {
       console.error(error)
       setToast({ message: 'No se pudo actualizar la jornada.', kind: 'error' })
@@ -2058,6 +2028,34 @@ function App() {
     } catch (error) {
       console.error(error)
       setToast({ message: 'No se pudo actualizar la jornada.', kind: 'error' })
+    }
+  }
+
+  const publishEditJornada = async () => {
+    if (!editingJornadaId) return
+    if (editJornadaName.trim().length < 2) {
+      setToast({ message: 'Ingresa un nombre de jornada valido.', kind: 'error' })
+      return
+    }
+
+    try {
+      await updateJornada(editingJornadaId, {
+        tournamentId: editJornadaTournamentId ? Number(editJornadaTournamentId) : null,
+        nombre: editJornadaName.trim(),
+        numero: editJornadaNumber ? Number(editJornadaNumber) : null,
+        status: 'open',
+        openAt: editJornadaOpen ? new Date(editJornadaOpen).toISOString() : null,
+        closeAt: editJornadaClose ? new Date(editJornadaClose).toISOString() : null,
+        firstPrize: Number(editJornadaFirstPrize || 0),
+        secondPrize: Number(editJornadaSecondPrize || 0),
+        notes: editJornadaNotes.trim(),
+      })
+      cancelEditJornada()
+      await refreshQuinielas()
+      setToast({ message: 'Jornada publicada.', kind: 'success' })
+    } catch (error) {
+      console.error(error)
+      setToast({ message: 'No se pudo publicar la jornada.', kind: 'error' })
     }
   }
 
@@ -2189,6 +2187,16 @@ function App() {
         <>
           <header className="hero">
             <div className="hero-inner">
+              <div className="hero-prize" aria-label="Premios de la jornada">
+                <div className="hero-prize-item">
+                  <span className="label">Primer lugar</span>
+                  <strong className="amount">{firstPrizeLabel}</strong>
+                </div>
+                <div className="hero-prize-item">
+                  <span className="label">Segundo lugar acumulado</span>
+                  <strong className="amount">{secondPrizeLabel}</strong>
+                </div>
+              </div>
 
               <div className="hero-center">
                 <img src="/logo.png" className="hero-logo" alt="Pronosticos Entre Cuates" onError={(event) => { event.currentTarget.style.display = 'none' }} />
@@ -2210,9 +2218,6 @@ function App() {
           <div className="prize-banner">
             <p>
               3 DOBLES <span className="highlight">$30</span> / 5 DOBLES <span className="highlight">$50</span> - UNICAS JUGADAS A ELEGIR - ULTIMO PREMIO
-            </p>
-            <p>
-              PRIMER LUGAR <span className="highlight">{firstPrizeLabel}</span> SEGUNDO LUGAR <span className="highlight">{secondPrizeLabel}</span>
             </p>
           </div>
 
@@ -3124,7 +3129,12 @@ function App() {
                               <div className="acts-cell">
                                 <span className={`status-badge ${item.status}`}>{item.status}</span>
                                 <button className="act-btn" onClick={() => startEditJornada(item)} type="button">Editar</button>
-                                <button className="act-btn" onClick={() => handleJornadaStatus(item, 'open')} type="button">Abrir</button>
+                                {item.status === 'draft' ? (
+                                  <button className="act-btn publish" onClick={() => handleJornadaStatus(item, 'open')} type="button">Publicar</button>
+                                ) : null}
+                                {item.status !== 'draft' && item.status !== 'open' ? (
+                                  <button className="act-btn" onClick={() => handleJornadaStatus(item, 'open')} type="button">Abrir</button>
+                                ) : null}
                                 <button className="act-btn cancel" onClick={() => handleJornadaStatus(item, 'closed')} type="button">Cerrar</button>
                                 <button className="act-btn" onClick={() => handleDistributePrizes(item)} type="button">Repartir premios</button>
                                 <button className="act-btn accept" onClick={() => handleJornadaStatus(item, 'finished')} type="button">Finalizar</button>
@@ -3385,6 +3395,9 @@ function App() {
                   </div>
                   <div className="admin-quiniela-actions">
                     <button className="act-btn cancel" onClick={cancelEditJornada} type="button">Cancelar</button>
+                    {jornadas.find((item) => item.id === editingJornadaId)?.status === 'draft' ? (
+                      <button className="act-btn publish" onClick={publishEditJornada} type="button">Publicar</button>
+                    ) : null}
                     <button className="act-btn save" onClick={saveEditJornada} type="button">Guardar cambios</button>
                   </div>
                 </div>

@@ -339,26 +339,40 @@ body {
 
 /* Sección izquierda del hero (premio/info) */
 .hero-prize {
+  justify-self: start;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(92px, 1fr));
+  gap: 18px;
+  align-items: center;
   text-align: left;
+}
+
+.hero-prize-item {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
 }
 
 /* Etiqueta pequeña encima del monto */
 .hero-prize .label {
+  display: block;
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 11px;
+  font-size: 14px;
+  line-height: 1;
   font-weight: 700;
-  letter-spacing: 3px;
-  color: var(--cyan);
+  letter-spacing: 1.6px;
+  color: var(--white);
   text-transform: uppercase;
 }
 
 /* Monto grande del premio con fuente display */
 .hero-prize .amount {
+  display: block;
   font-family: 'Bebas Neue', sans-serif;
-  font-size: 52px;
+  font-size: 42px;
   line-height: 1;
-  color: var(--white);
-  text-shadow: 0 0 20px rgba(0, 229, 255, 0.5);
+  color: var(--yellow);
+  text-shadow: 0 0 18px rgba(255, 214, 0, 0.35);
 }
 
 /* Centro del hero: logo + edición */
@@ -1377,18 +1391,21 @@ body {
 }
 
 .registro-table-wrap {
-  overflow: visible;
+  overflow-x: auto;
+  overflow-y: visible;
   border-radius: 10px;
   border: 1px solid rgba(0, 0, 0, 0.75);
   background: #f4f7fb;
   box-shadow: 0 18px 34px rgba(0, 0, 0, 0.28);
   width: 100%;
-  min-width: 1120px;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .registro-table {
   width: 100%;
-  min-width: 1120px;
+  min-width: 980px;
+  table-layout: fixed;
   border-collapse: collapse;
   background: #ffffff;
 }
@@ -1400,19 +1417,30 @@ body {
   display: none;
 }
 
-.registro-table th:first-child,
-.registro-table td:first-child {
-  min-width: 96px;
+.registro-table .registro-id-col {
+  width: 118px;
 }
 
-.registro-table th:nth-child(2),
-.registro-table td:nth-child(2) {
-  min-width: 110px;
+.registro-table .registro-name-col {
+  width: 132px;
 }
 
-.registro-table thead th:not(:first-child):not(:nth-child(2)):not(:last-child),
-.registro-table tbody td:not(:first-child):not(:nth-child(2)):not(:last-child) {
-  min-width: 98px;
+.registro-table .registro-phone-col,
+.registro-desktop-head-row th:not(.registro-id-col):not(.registro-name-col):not(.registro-match-col):not(.registro-status-col):not(.registro-points-col) {
+  width: 124px;
+}
+
+.registro-table .registro-status-col {
+  width: 122px;
+}
+
+.registro-table .registro-points-col {
+  width: 72px;
+}
+
+.registro-table .registro-match-col {
+  width: auto;
+  min-width: 58px;
 }
 
 .registro-table thead th {
@@ -1436,17 +1464,19 @@ body {
 }
 
 .registro-table thead th .registro-team-label {
+  display: grid;
+  justify-items: center;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .registro-table thead th .registro-team-line {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   font-size: 11px;
   line-height: 1.2;
-  min-height: 40px;
+  min-height: 32px;
   white-space: nowrap;
   align-items: center;
   justify-content: center;
@@ -1470,15 +1500,12 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 0;
   max-width: 100%;
 }
 
 .registro-team-name-score > span {
-  display: block;
-  max-width: 84px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  display: none;
 }
 
 .registro-table tbody td {
@@ -2053,8 +2080,17 @@ body {
     gap: 14px;
   }
 
+  .hero-prize {
+    gap: 12px;
+  }
+
+  .hero-prize .label {
+    font-size: 12px;
+    letter-spacing: 1.2px;
+  }
+
   .hero-prize .amount {
-    font-size: 42px;
+    font-size: 34px;
   }
 
   .hero-edition {
@@ -2163,7 +2199,13 @@ body {
 
   .hero-prize,
   .hero-close {
+    justify-self: center;
     text-align: center;
+  }
+
+  .hero-prize {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: 360px;
   }
 
   .hero-logo {
@@ -2466,20 +2508,32 @@ body {
     letter-spacing: 0.4px;
   }
 
-  .registro-table th:first-child,
-  .registro-table td:first-child {
+  .registro-table .registro-id-col {
     min-width: 42px;
     width: 42px;
   }
 
-  .registro-table th:nth-child(2),
-  .registro-table td:nth-child(2) {
+  .registro-table .registro-name-col {
     min-width: 72px;
     width: 72px;
   }
 
-  .registro-table thead th:not(:first-child):not(:nth-child(2)):not(:last-child),
-  .registro-table tbody td:not(:first-child):not(:nth-child(2)):not(:last-child) {
+  .registro-table .registro-phone-col {
+    min-width: 78px;
+    width: 78px;
+  }
+
+  .registro-table .registro-status-col {
+    min-width: 86px;
+    width: 86px;
+  }
+
+  .registro-table .registro-points-col {
+    min-width: 46px;
+    width: 46px;
+  }
+
+  .registro-table .registro-match-col {
     min-width: 64px;
     width: 64px;
   }
@@ -3566,6 +3620,16 @@ body {
 
 .act-btn.save:hover {
   background: rgba(0, 230, 118, 0.22);
+}
+
+.act-btn.publish {
+  background: rgba(0, 229, 255, 0.12);
+  border-color: rgba(0, 229, 255, 0.34);
+  color: var(--cyan);
+}
+
+.act-btn.publish:hover {
+  background: rgba(0, 229, 255, 0.22);
 }
 
 .act-btn.delete {
