@@ -101,10 +101,31 @@ const CLUB_LOGOS: Record<string, string> = {
   Toluca: '/logos_equipos/toluca.svg',
 }
 
+const LIGA_MX_TEAM_DISPLAY_NAMES = [
+  'América',
+  'Atlas',
+  'Atlante',
+  'Atletico de San Luis',
+  'CD Guadalajara',
+  'Cruz Azul',
+  'Juárez',
+  'León',
+  'Monterrey',
+  'Necaxa',
+  'Pachuca',
+  'Puebla',
+  'Pumas',
+  'Querétaro',
+  'Santos Laguna',
+  'Tigres',
+  'Tijuana',
+  'Toluca',
+]
+
 export const TEAM_LOGOS: Record<string, string> = {
   ...COUNTRY_LOGOS,
   ...CLUB_LOGOS,
 }
 
-export const LIGA_MX_TEAM_NAMES = Object.keys(CLUB_LOGOS)
+export const LIGA_MX_TEAM_NAMES = LIGA_MX_TEAM_DISPLAY_NAMES
 export const INTERNATIONAL_TEAM_NAMES = Object.keys(COUNTRY_LOGOS)

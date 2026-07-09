@@ -1446,6 +1446,14 @@ function App() {
       return
     }
 
+    const rankingPointTotals = registroRankingRows.map((quiniela) => countQuinielaPoints(quiniela, registroMatches))
+    const maxRankingPoints = rankingPointTotals.length > 0 ? Math.max(...rankingPointTotals) : 0
+    const secondRankingPoints = rankingPointTotals.filter((points) => points < maxRankingPoints)
+    const secondPlacePoints = secondRankingPoints.length > 0 ? Math.max(...secondRankingPoints) : null
+    const secondPlaceCount = secondPlacePoints === null ? 0 : rankingPointTotals.filter((points) => points === secondPlacePoints).length
+    const tournamentName = jornada?.tournamentId ? tournaments.find((item) => item.id === jornada.tournamentId)?.nombre : ''
+    const pdfTitle = jornadaTitle.toUpperCase()
+    const pdfSubtitle = tournamentName ? `${tournamentName.toUpperCase()} - ${pdfTitle}` : pdfTitle
     const tableWrap = document.querySelector('.registro-card .registro-table-wrap')
     const clonedTableWrap = tableWrap?.cloneNode(true) as HTMLElement | null
 
@@ -1468,7 +1476,9 @@ function App() {
           <meta charset="utf-8" />
           <title>Quinielas registradas ${escapePdfText(jornadaTitle)}</title>
           <style>
-            @page { size: landscape; margin: 10mm; }
+            @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600;700&display=swap');
+
+            @page { size: letter portrait; margin: 12px 8px 14px; }
             *,
             *::before,
             *::after {
@@ -1482,103 +1492,208 @@ function App() {
               padding: 0;
               background: #ffffff !important;
               color: #050505;
+              font-family: 'Barlow', Arial, Helvetica, sans-serif;
+            }
+            .pdf-shell {
+              width: 800px;
+              height: 1030px;
+              overflow: hidden;
+              background: #ffffff !important;
+            }
+            .pdf-fit {
+              width: 800px;
+              transform: scale(var(--pdf-scale, 1));
+              transform-origin: top left;
+            }
+            .pdf-top {
+              display: grid;
+              grid-template-columns: 128px 1fr 128px;
+              align-items: start;
+              min-height: 82px;
+            }
+            .pdf-logo {
+              display: block;
+              width: 112px;
+              height: auto;
+              margin: 4px 0 0 8px;
+            }
+            .pdf-counts {
+              margin: 6px 0 6px 14px;
               font-family: Arial, Helvetica, sans-serif;
+              font-size: 12px;
+              line-height: 1.25;
+              font-weight: 800;
+            }
+            .pdf-title {
+              margin: 0 0 4px;
+              text-align: center;
+              color: #ff1010;
+              font-family: Arial, Helvetica, sans-serif;
+              font-size: 27px;
+              font-weight: 900;
+              letter-spacing: 1px;
+            }
+            .pdf-blue-band {
+              margin: 0;
+              padding: 4px 10px 5px;
+              background: #07006d !important;
+              color: #ffffff !important;
+              text-align: center;
+              font-family: Arial, Helvetica, sans-serif;
+              font-size: 26px;
+              line-height: 1;
+              font-weight: 900;
+              letter-spacing: 1.5px;
+              text-transform: uppercase;
+            }
+            .pdf-prizes {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              gap: 22px;
+              margin: 4px 0 5px;
+              font-family: Arial, Helvetica, sans-serif;
+              font-size: 22px;
+              line-height: 1;
+              font-weight: 900;
+            }
+            .pdf-prizes strong {
+              color: #ff1010 !important;
+            }
+            .pdf-subtitle {
+              margin: 0;
+              padding: 2px 10px 4px;
+              background: #07006d !important;
+              color: #ffffff !important;
+              text-align: center;
+              font-family: Arial, Helvetica, sans-serif;
+              font-size: 16px;
+              line-height: 1;
+              font-weight: 900;
+              text-transform: uppercase;
             }
             .registro-table-wrap {
-              overflow: visible;
+              overflow: visible !important;
               border-radius: 10px;
               border: 1px solid rgba(0, 0, 0, 0.75);
               background: #f4f7fb !important;
               box-shadow: none;
               width: max-content;
+              max-width: none;
+              transform: scale(var(--pdf-table-scale, 1));
+              transform-origin: top left;
             }
             .registro-table {
               width: max-content;
-              min-width: 1120px;
+              min-width: 0;
+              table-layout: fixed;
               border-collapse: collapse;
               background: #ffffff !important;
             }
-            .registro-table th:first-child,
-            .registro-table td:first-child {
-              min-width: 96px;
+            .registro-mobile-title-row,
+            .registro-mobile-match-stack-row,
+            .registro-mobile-pick-head-row {
+              display: none !important;
             }
-            .registro-table th:nth-child(2),
-            .registro-table td:nth-child(2) {
-              min-width: 110px;
+            .registro-desktop-head-row {
+              display: table-row !important;
             }
-            .registro-table thead th:not(:first-child):not(:nth-child(2)):not(:last-child),
-            .registro-table tbody td:not(:first-child):not(:nth-child(2)):not(:last-child) {
-              min-width: 116px;
+            .registro-table .registro-id-col {
+              width: 50px;
+            }
+            .registro-table .registro-name-col {
+              width: 74px;
+            }
+            .registro-table .registro-points-col {
+              width: 32px;
+            }
+            .registro-table .registro-match-col {
+              width: 44px;
+              min-width: 44px;
+              max-width: 44px;
             }
             .registro-table thead th {
               position: static;
-              top: 0;
-              z-index: 1;
               background: #07006d !important;
               color: #ffffff !important;
-              padding: 10px 10px;
+              height: auto;
+              padding: 0 1px;
               text-align: center;
               font-family: 'Barlow Condensed', Arial, Helvetica, sans-serif;
-              font-size: 11px;
-              letter-spacing: 1.5px;
+              font-size: 6px;
+              letter-spacing: 0.4px;
               text-transform: uppercase;
               border: 1px solid #101010;
               vertical-align: middle;
             }
-            .registro-table thead th span {
-              font-size: 12px;
-            }
             .registro-table thead th .registro-team-label {
+              display: grid;
+              justify-items: center;
               align-items: center;
-              gap: 6px;
+              gap: 0;
             }
             .registro-table thead th .registro-team-line {
               display: flex;
               flex-direction: column;
-              gap: 3px;
-              font-size: 12px;
-              line-height: 1.2;
-              min-height: 42px;
-              white-space: nowrap;
               align-items: center;
               justify-content: center;
+              min-height: 9px;
+              line-height: 0.75;
+              gap: 0;
             }
             .registro-table thead th .registro-team-logo {
-              width: 18px;
-              height: 18px;
-              flex-basis: 18px;
+              display: block;
+              width: 9px;
+              height: 9px;
               object-fit: contain;
             }
             .registro-table thead th small {
               display: block;
-              margin: 2px 0;
+              margin: 0;
               color: rgba(255, 255, 255, 0.75) !important;
-              font-size: 9px;
-              letter-spacing: 1px;
+              font-size: 5px;
+              letter-spacing: 0.3px;
+            }
+            .registro-table thead th .registro-team-score {
+              display: block;
+              height: 5px;
+              line-height: 5px;
+              font-size: 5px;
             }
             .registro-team-name-score {
               display: inline-flex;
               align-items: center;
               justify-content: center;
-              gap: 4px;
               max-width: 100%;
             }
+            .registro-team-name-score > span {
+              display: none;
+            }
             .registro-table tbody td {
-              padding: 8px 6px;
+              height: auto;
+              padding: 2px 1px;
               text-align: center;
               border: 1px solid #101010;
               color: #050505 !important;
-              font-size: 13px;
-              font-weight: 700;
+              font-family: 'Barlow Condensed', Arial, Helvetica, sans-serif;
+              font-size: 9px;
+              line-height: 1;
+              font-weight: 800;
               vertical-align: middle;
               background: #ffffff !important;
-            }
-            .registro-table tbody tr:nth-child(even) {
-              background: transparent;
             }
             .registro-table tbody td:nth-child(1),
             .registro-table tbody td:nth-child(2) {
               background: #f7f7f7 !important;
+            }
+            .registro-id-col,
+            .registro-name-col {
+              overflow-wrap: normal;
+            }
+            .registro-name-col {
+              white-space: normal;
+              overflow: visible;
+              text-overflow: clip;
             }
             .registro-pick-cell.hit {
               background: #10d678 !important;
@@ -1595,34 +1710,91 @@ function App() {
             .registro-pick {
               display: block;
               width: 100%;
-              min-width: 0;
-              height: auto;
               padding: 0;
-              border-radius: 0;
-              font-family: inherit;
-              font-size: 13px;
-              letter-spacing: 0;
               border: 0;
               background: transparent !important;
               color: inherit !important;
+              font: inherit;
               white-space: nowrap;
+            }
+            .pdf-footer {
+              margin-top: 8px;
+              text-align: right;
+              font-family: Arial, Helvetica, sans-serif;
+              font-size: 11px;
+              color: #050505 !important;
+            }
+            @media print {
+              body { min-width: 0; }
+              .pdf-fit {
+                page-break-inside: avoid;
+                break-inside: avoid;
+              }
             }
           </style>
         </head>
         <body>
-          ${clonedTableWrap.outerHTML}
+          <div class="pdf-shell">
+            <div class="pdf-fit">
+              <div class="pdf-top">
+                <img class="pdf-logo" src="/logo.png" alt="Pronosticos Entre Cuates" />
+              </div>
+              <div class="pdf-counts">
+                <div>Personas en primer lugar: ${escapePdfText(registroFirstPlaceCount)}</div>
+                <div>Personas con 0 aciertos: ${escapePdfText(registroZeroPointsCount)}</div>
+              </div>
+              <h1 class="pdf-title">PRONOSTICOS ENTRE CUATES</h1>
+              <div class="pdf-blue-band">SUERTE A TODOS LOS PARTICIPANTES</div>
+              <div class="pdf-prizes">
+                <span>1&deg; LUGAR <strong>${escapePdfText(firstPrizeLabel)}</strong></span>
+                <span>/</span>
+                <span>2&deg; LUGAR <strong>${escapePdfText(secondPrizeLabel)}</strong></span>
+              </div>
+              <div class="pdf-subtitle">${escapePdfText(pdfSubtitle)}</div>
+              ${clonedTableWrap.outerHTML}
+              <div class="pdf-footer">Pronosticos Entre Cuates</div>
+            </div>
+          </div>
           <script>
+            const applyPdfScale = () => {
+              const shell = document.querySelector('.pdf-shell');
+              const fit = document.querySelector('.pdf-fit');
+              const tableWrap = document.querySelector('.registro-table-wrap');
+              if (!shell || !fit) return;
+
+              document.documentElement.style.setProperty('--pdf-scale', '1');
+              document.documentElement.style.setProperty('--pdf-table-scale', '1');
+
+              if (tableWrap) {
+                const nonTableHeight = fit.scrollHeight - tableWrap.scrollHeight;
+                const availableTableHeight = Math.max(shell.clientHeight - nonTableHeight, tableWrap.scrollHeight);
+                const tableScale = Math.min(
+                  shell.clientWidth / tableWrap.scrollWidth,
+                  availableTableHeight / tableWrap.scrollHeight
+                );
+                document.documentElement.style.setProperty('--pdf-table-scale', String(Math.max(tableScale, 1)));
+              }
+
+              const scale = Math.min(shell.clientWidth / fit.scrollWidth, shell.clientHeight / fit.scrollHeight);
+              document.documentElement.style.setProperty('--pdf-scale', String(Math.max(scale, 0.38)));
+            };
             const printWhenReady = () => {
               const images = Array.from(document.images);
               const pendingImages = images.filter((image) => !image.complete);
+              const print = () => {
+                requestAnimationFrame(() => {
+                  applyPdfScale();
+                  requestAnimationFrame(() => window.print());
+                });
+              };
               if (pendingImages.length === 0) {
-                window.print();
+                print();
                 return;
               }
               Promise.allSettled(pendingImages.map((image) => new Promise((resolve) => {
                 image.addEventListener('load', resolve, { once: true });
                 image.addEventListener('error', resolve, { once: true });
-              }))).then(() => window.print());
+              }))).then(print);
             };
             window.addEventListener('load', printWhenReady);
           </script>
