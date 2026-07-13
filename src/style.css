@@ -1543,6 +1543,15 @@ body {
   color: #000000;
 }
 
+.registro-points-cell.leader {
+  background: #10d678 !important;
+}
+
+.registro-points-cell.last {
+  background: #ff4d4f !important;
+  color: #ffffff;
+}
+
 .registro-pick {
   display: block;
   width: 100%;

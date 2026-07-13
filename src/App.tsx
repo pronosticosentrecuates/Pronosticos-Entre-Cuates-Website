@@ -94,6 +94,7 @@ const LIGA_MX_DEFAULT_SEASON = '2026-2027'
 const SPORTSDB_KEY = import.meta.env.VITE_THESPORTSDB_KEY || '123'
 const MEXICO_TIME_ZONE = 'America/Mexico_City'
 const WHATSAPP_DESTINATION_PHONE = '523921282055'
+const FACEBOOK_PROFILE_URL = 'https://www.facebook.com/profile.php?id=61587124175139'
 const LIGA_MX_TEAM_ALIASES: Record<string, string> = {
   'Club America': 'América',
   America: 'América',
@@ -1708,6 +1709,13 @@ function App() {
               background: #fff200 !important;
               color: #000000 !important;
             }
+            .registro-points-cell.leader {
+              background: #10d678 !important;
+            }
+            .registro-points-cell.last {
+              background: #ff4d4f !important;
+              color: #ffffff !important;
+            }
             .registro-pick {
               display: block;
               width: 100%;
@@ -1812,6 +1820,10 @@ function App() {
     const leadingColumnSpan = showStatus ? 3 : 2
     const trailingColumnSpan = showStatus ? 2 : 1
     const tableColumnCount = leadingColumnSpan + registroMatches.length + trailingColumnSpan
+    const rowPointTotals = rows.map((quiniela) => countQuinielaPoints(quiniela, registroMatches))
+    const maxRowPoints = rowPointTotals.length > 0 ? Math.max(...rowPointTotals) : 0
+    const minRowPoints = rowPointTotals.length > 0 ? Math.min(...rowPointTotals) : 0
+    const hasPointSpread = maxRowPoints > minRowPoints
 
     return (
     <div className="registro-table-wrap">
@@ -1876,7 +1888,17 @@ function App() {
           </tr>
         </thead>
         <tbody>
-          {rows.map((quiniela) => (
+          {rows.map((quiniela) => {
+            const points = countQuinielaPoints(quiniela, registroMatches)
+            const pointsPosition = hasPointSpread
+              ? points === maxRowPoints
+                ? 'leader'
+                : points === minRowPoints
+                  ? 'last'
+                  : 'middle'
+              : 'middle'
+
+            return (
             <tr key={quiniela.id}>
               <td className="registro-id-col">{quiniela.folio ?? quiniela.id}</td>
               <td className="registro-name-col">{quiniela.nombre}</td>
@@ -1902,11 +1924,12 @@ function App() {
                   </span>
                 </td>
               ) : null}
-              <td className="registro-points-col registro-points-cell">
-                <strong>{countQuinielaPoints(quiniela, registroMatches)}</strong>
+              <td className={`registro-points-col registro-points-cell ${pointsPosition}`}>
+                <strong>{points}</strong>
               </td>
             </tr>
-          ))}
+            )
+          })}
         </tbody>
       </table>
     </div>
@@ -2341,18 +2364,18 @@ function App() {
           </button>
         </div>
         <div className="topnav-social" aria-label="Redes sociales">
-          <button className="social-btn social-facebook" onClick={() => setNavOpen(false)} type="button">
+          <a className="social-btn social-facebook" href={FACEBOOK_PROFILE_URL} onClick={() => setNavOpen(false)} rel="noopener noreferrer" target="_blank">
             <svg className="social-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path d="M15.1 8.4h2.2V4.7c-.4-.1-1.7-.2-3.2-.2-3.2 0-5.4 1.9-5.4 5.4v3H5.3V17h3.4v7h4.2v-7h3.4l.5-4.1h-3.9v-2.6c0-1.2.3-1.9 2.2-1.9Z" />
             </svg>
             Facebook
-          </button>
-          <button className="social-btn social-whatsapp" onClick={() => setNavOpen(false)} type="button">
+          </a>
+          <a className="social-btn social-whatsapp" href={`https://wa.me/${WHATSAPP_DESTINATION_PHONE}`} onClick={() => setNavOpen(false)} rel="noopener noreferrer" target="_blank">
             <svg className="social-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path d="M12.1 2a9.8 9.8 0 0 0-8.4 14.9L2.5 22l5.3-1.2A9.9 9.9 0 1 0 12.1 2Zm0 2a7.9 7.9 0 1 1-3.9 14.8l-.4-.2-3 .7.7-2.9-.3-.5A7.8 7.8 0 0 1 12.1 4Zm-3.4 4.2c-.2 0-.5.1-.7.4-.2.3-.9.9-.9 2.1 0 1.3.9 2.5 1 2.7.1.2 1.8 2.8 4.4 3.8 2.2.9 2.7.7 3.2.6.5-.1 1.6-.7 1.8-1.3.2-.6.2-1.1.2-1.2-.1-.1-.2-.2-.5-.4l-1.7-.8c-.3-.1-.5-.1-.7.2l-.7.9c-.2.2-.4.2-.7.1-1-.4-1.9-.9-2.6-1.7-.6-.7-.9-1.2-1.1-1.6-.1-.3 0-.4.1-.6l.4-.5c.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5l-.8-1.8c-.2-.5-.4-.5-.6-.5h-.4Z" />
             </svg>
             WhatsApp
-          </button>
+          </a>
         </div>
       </nav>
 
@@ -2494,11 +2517,12 @@ function App() {
                   <input
                     className="input-field"
                     id="input-phone"
-                    maxLength={10}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     placeholder="Numero de celular"
                     type="tel"
                     value={celular}
-                    onChange={(event) => setCelular(event.target.value)}
+                    onChange={(event) => setCelular(normalizePhone(event.target.value).slice(0, 10))}
                   />
                 </div>
               </div>
