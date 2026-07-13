@@ -93,6 +93,7 @@ const LIGA_MX_LEAGUE_ID = '4350'
 const LIGA_MX_DEFAULT_SEASON = '2026-2027'
 const SPORTSDB_KEY = import.meta.env.VITE_THESPORTSDB_KEY || '123'
 const MEXICO_TIME_ZONE = 'America/Mexico_City'
+const WHATSAPP_DESTINATION_PHONE = '523921282055'
 const LIGA_MX_TEAM_ALIASES: Record<string, string> = {
   'Club America': 'América',
   America: 'América',
@@ -1378,7 +1379,7 @@ function App() {
       await refreshQuinielas()
       window.localStorage.setItem(QUINIELAS_REFRESH_STORAGE_KEY, JSON.stringify(registeredFolios))
       setDraftQuinielas([])
-      navigateToWhatsApp(`https://wa.me/?text=${encodeURIComponent(message)}`)
+      navigateToWhatsApp(`https://wa.me/${WHATSAPP_DESTINATION_PHONE}?text=${encodeURIComponent(message)}`)
     } catch (error) {
       if (whatsappWindow && !whatsappWindow.closed) {
         whatsappWindow.close()
