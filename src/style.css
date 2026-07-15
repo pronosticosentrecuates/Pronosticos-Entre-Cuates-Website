@@ -923,6 +923,10 @@ body {
   line-height: 1.4;
 }
 
+.mobile-mode-block {
+  display: none;
+}
+
 /* Barra que muestra costo y totales */
 .cost-bar {
   background: rgba(13, 34, 68, 0.9);
@@ -2250,6 +2254,16 @@ body {
 
   .prize-banner p {
     font-size: 12px;
+  }
+
+  .mobile-mode-block {
+    display: block;
+    width: calc(100% - (var(--page-gutter) * 2));
+    margin: 16px auto 0;
+  }
+
+  .desktop-mode-block {
+    display: none;
   }
 
   .main-container {

@@ -2417,6 +2417,25 @@ function App() {
             </p>
           </div>
 
+          <div className="input-block mobile-mode-block">
+            <div className="input-label">Modalidad</div>
+            <div className="mode-options">
+              {MODALIDADES.map((option) => (
+                <button
+                  className={`mode-option${modalidad === option ? ' active' : ''}`}
+                  disabled={!registrosAbiertos}
+                  key={option}
+                  onClick={() => handleModalidadChange(option)}
+                  type="button"
+                >
+                  <span>{option}</span>
+                  <strong>${getCosto(option)}</strong>
+                </button>
+              ))}
+            </div>
+            <div className="mode-hint">Cada modalidad define el costo y el mÃ¡ximo de dobles permitidos.</div>
+          </div>
+
           {dataLoading ? <div className="app-notice">Cargando datos de la jornada...</div> : null}
           {dataError ? <div className="app-notice error">{dataError}</div> : null}
           {jornadaPendientePorFecha ? <div className="app-notice">Esta jornada abre el {new Date(jornada!.openAt!).toLocaleString('es-MX')}</div> : null}
@@ -2488,7 +2507,7 @@ function App() {
 
             <div className="right-column">
               <div className="bottom-section">
-                <div className="input-block">
+                <div className="input-block desktop-mode-block">
                   <div className="input-label">Modalidad</div>
                   <div className="mode-options">
                     {MODALIDADES.map((option) => (
