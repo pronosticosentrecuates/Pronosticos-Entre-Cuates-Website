@@ -2433,7 +2433,7 @@ function App() {
                 </button>
               ))}
             </div>
-            <div className="mode-hint">Cada modalidad define el costo y el mÃ¡ximo de dobles permitidos.</div>
+            <div className="mode-hint">Cada modalidad define el costo y el máximo de dobles permitidos.</div>
           </div>
 
           {dataLoading ? <div className="app-notice">Cargando datos de la jornada...</div> : null}
