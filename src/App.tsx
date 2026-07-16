@@ -93,7 +93,6 @@ const LIGA_MX_LEAGUE_ID = '4350'
 const LIGA_MX_DEFAULT_SEASON = '2026-2027'
 const SPORTSDB_KEY = import.meta.env.VITE_THESPORTSDB_KEY || '123'
 const MEXICO_TIME_ZONE = 'America/Mexico_City'
-const WHATSAPP_DESTINATION_PHONE = '523921282055'
 const WHATSAPP_DESTINATION_URL = 'https://chat.whatsapp.com/EjZzQ5lQI1c7oRSpSlUsjT?s=cl&p=i&ilr=4'
 const FACEBOOK_PROFILE_URL = 'https://www.facebook.com/profile.php?id=61587124175139'
 const LIGA_MX_TEAM_ALIASES: Record<string, string> = {
@@ -1381,7 +1380,7 @@ function App() {
       await refreshQuinielas()
       window.localStorage.setItem(QUINIELAS_REFRESH_STORAGE_KEY, JSON.stringify(registeredFolios))
       setDraftQuinielas([])
-      navigateToWhatsApp(`https://wa.me/${WHATSAPP_DESTINATION_PHONE}?text=${encodeURIComponent(message)}`)
+      navigateToWhatsApp(`https://wa.me/${WHATSAPP_DESTINATION_URL}?text=${encodeURIComponent(message)}`)
     } catch (error) {
       if (whatsappWindow && !whatsappWindow.closed) {
         whatsappWindow.close()
@@ -1449,6 +1448,11 @@ function App() {
       return
     }
 
+    const rankingPointTotals = registroRankingRows.map((quiniela) => countQuinielaPoints(quiniela, registroMatches))
+    const maxRankingPoints = rankingPointTotals.length > 0 ? Math.max(...rankingPointTotals) : 0
+    const secondRankingPoints = rankingPointTotals.filter((points) => points < maxRankingPoints)
+    const secondPlacePoints = secondRankingPoints.length > 0 ? Math.max(...secondRankingPoints) : null
+    const secondPlaceCount = secondPlacePoints === null ? 0 : rankingPointTotals.filter((points) => points === secondPlacePoints).length
     const tournamentName = jornada?.tournamentId ? tournaments.find((item) => item.id === jornada.tournamentId)?.nombre : ''
     const pdfTitle = jornadaTitle.toUpperCase()
     const pdfSubtitle = tournamentName ? `${tournamentName.toUpperCase()} - ${pdfTitle}` : pdfTitle
@@ -2366,7 +2370,7 @@ function App() {
             </svg>
             Facebook
           </a>
-          <a className="social-btn social-whatsapp" href={WHATSAPP_DESTINATION_URL} onClick={() => setNavOpen(false)} rel="noopener noreferrer" target="_blank">
+          <a className="social-btn social-whatsapp" href={`https://wa.me/${WHATSAPP_DESTINATION_URL}`} onClick={() => setNavOpen(false)} rel="noopener noreferrer" target="_blank">
             <svg className="social-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path d="M12.1 2a9.8 9.8 0 0 0-8.4 14.9L2.5 22l5.3-1.2A9.9 9.9 0 1 0 12.1 2Zm0 2a7.9 7.9 0 1 1-3.9 14.8l-.4-.2-3 .7.7-2.9-.3-.5A7.8 7.8 0 0 1 12.1 4Zm-3.4 4.2c-.2 0-.5.1-.7.4-.2.3-.9.9-.9 2.1 0 1.3.9 2.5 1 2.7.1.2 1.8 2.8 4.4 3.8 2.2.9 2.7.7 3.2.6.5-.1 1.6-.7 1.8-1.3.2-.6.2-1.1.2-1.2-.1-.1-.2-.2-.5-.4l-1.7-.8c-.3-.1-.5-.1-.7.2l-.7.9c-.2.2-.4.2-.7.1-1-.4-1.9-.9-2.6-1.7-.6-.7-.9-1.2-1.1-1.6-.1-.3 0-.4.1-.6l.4-.5c.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5l-.8-1.8c-.2-.5-.4-.5-.6-.5h-.4Z" />
             </svg>
