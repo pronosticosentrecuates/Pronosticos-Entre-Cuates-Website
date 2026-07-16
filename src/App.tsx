@@ -1480,7 +1480,7 @@ function App() {
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600;700&display=swap');
 
-            @page { size: letter portrait; margin: 12px 8px 14px; }
+            @page { size: letter portrait; margin: 12px 10px 16px; }
             *,
             *::before,
             *::after {
@@ -1492,20 +1492,18 @@ function App() {
             body {
               margin: 0;
               padding: 0;
+              width: 100%;
               background: #ffffff !important;
               color: #050505;
               font-family: 'Barlow', Arial, Helvetica, sans-serif;
             }
             .pdf-shell {
-              width: 800px;
-              height: 1030px;
-              overflow: hidden;
+              width: 100%;
+              overflow: visible;
               background: #ffffff !important;
             }
             .pdf-fit {
-              width: 800px;
-              transform: scale(var(--pdf-scale, 1));
-              transform-origin: top left;
+              width: 100%;
             }
             .pdf-top {
               display: grid;
@@ -1576,18 +1574,16 @@ function App() {
             }
             .registro-table-wrap {
               overflow: visible !important;
-              border-radius: 10px;
+              border-radius: 0;
               border: 1px solid rgba(0, 0, 0, 0.75);
               background: #f4f7fb !important;
               box-shadow: none;
-              width: max-content;
-              max-width: none;
-              transform: scale(var(--pdf-table-scale, 1));
-              transform-origin: top left;
+              width: 100%;
+              max-width: 100%;
             }
             .registro-table {
-              width: max-content;
-              min-width: 0;
+              width: 100%;
+              min-width: 100%;
               table-layout: fixed;
               border-collapse: collapse;
               background: #ffffff !important;
@@ -1601,18 +1597,18 @@ function App() {
               display: table-row !important;
             }
             .registro-table .registro-id-col {
-              width: 50px;
+              width: 11%;
             }
             .registro-table .registro-name-col {
-              width: 74px;
+              width: 17%;
             }
             .registro-table .registro-points-col {
-              width: 32px;
+              width: 6%;
             }
             .registro-table .registro-match-col {
-              width: 44px;
-              min-width: 44px;
-              max-width: 44px;
+              width: calc(66% / var(--pdf-match-count));
+              min-width: 0;
+              max-width: none;
             }
             .registro-table thead th {
               position: static;
@@ -1684,6 +1680,13 @@ function App() {
               vertical-align: middle;
               background: #ffffff !important;
             }
+            .registro-table thead {
+              display: table-header-group;
+            }
+            .registro-table tbody tr {
+              break-inside: avoid;
+              page-break-inside: avoid;
+            }
             .registro-table tbody td:nth-child(1),
             .registro-table tbody td:nth-child(2) {
               background: #f7f7f7 !important;
@@ -1735,15 +1738,13 @@ function App() {
             }
             @media print {
               body { min-width: 0; }
-              .pdf-fit {
-                page-break-inside: avoid;
-                break-inside: avoid;
-              }
+              .pdf-shell,
+              .pdf-fit { width: 100%; }
             }
           </style>
         </head>
         <body>
-          <div class="pdf-shell">
+          <div class="pdf-shell" style="--pdf-match-count: ${Math.max(registroMatches.length, 1)}">
             <div class="pdf-fit">
               <div class="pdf-top">
                 <img class="pdf-logo" src="/logo.png" alt="Pronosticos Entre Cuates" />
@@ -1765,36 +1766,11 @@ function App() {
             </div>
           </div>
           <script>
-            const applyPdfScale = () => {
-              const shell = document.querySelector('.pdf-shell');
-              const fit = document.querySelector('.pdf-fit');
-              const tableWrap = document.querySelector('.registro-table-wrap');
-              if (!shell || !fit) return;
-
-              document.documentElement.style.setProperty('--pdf-scale', '1');
-              document.documentElement.style.setProperty('--pdf-table-scale', '1');
-
-              if (tableWrap) {
-                const nonTableHeight = fit.scrollHeight - tableWrap.scrollHeight;
-                const availableTableHeight = Math.max(shell.clientHeight - nonTableHeight, tableWrap.scrollHeight);
-                const tableScale = Math.min(
-                  shell.clientWidth / tableWrap.scrollWidth,
-                  availableTableHeight / tableWrap.scrollHeight
-                );
-                document.documentElement.style.setProperty('--pdf-table-scale', String(Math.max(tableScale, 1)));
-              }
-
-              const scale = Math.min(shell.clientWidth / fit.scrollWidth, shell.clientHeight / fit.scrollHeight);
-              document.documentElement.style.setProperty('--pdf-scale', String(Math.max(scale, 0.38)));
-            };
             const printWhenReady = () => {
               const images = Array.from(document.images);
               const pendingImages = images.filter((image) => !image.complete);
               const print = () => {
-                requestAnimationFrame(() => {
-                  applyPdfScale();
-                  requestAnimationFrame(() => window.print());
-                });
+                requestAnimationFrame(() => window.print());
               };
               if (pendingImages.length === 0) {
                 print();
