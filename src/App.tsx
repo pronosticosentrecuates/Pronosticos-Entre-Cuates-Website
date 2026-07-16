@@ -1448,11 +1448,6 @@ function App() {
       return
     }
 
-    const rankingPointTotals = registroRankingRows.map((quiniela) => countQuinielaPoints(quiniela, registroMatches))
-    const maxRankingPoints = rankingPointTotals.length > 0 ? Math.max(...rankingPointTotals) : 0
-    const secondRankingPoints = rankingPointTotals.filter((points) => points < maxRankingPoints)
-    const secondPlacePoints = secondRankingPoints.length > 0 ? Math.max(...secondRankingPoints) : null
-    const secondPlaceCount = secondPlacePoints === null ? 0 : rankingPointTotals.filter((points) => points === secondPlacePoints).length
     const tournamentName = jornada?.tournamentId ? tournaments.find((item) => item.id === jornada.tournamentId)?.nombre : ''
     const pdfTitle = jornadaTitle.toUpperCase()
     const pdfSubtitle = tournamentName ? `${tournamentName.toUpperCase()} - ${pdfTitle}` : pdfTitle
@@ -1463,6 +1458,40 @@ function App() {
       window.alert('No se encontro la tabla para exportar.')
       return
     }
+
+    const clonedTable = clonedTableWrap.querySelector('.registro-table') as HTMLTableElement | null
+
+    if (!clonedTable) {
+      window.alert('No se encontro la tabla para exportar.')
+      return
+    }
+
+    clonedTable
+      .querySelectorAll('.registro-mobile-title-row, .registro-mobile-match-stack-row, .registro-mobile-pick-head-row')
+      .forEach((row) => row.remove())
+
+    const matchCount = Math.max(registroMatches.length, 1)
+    const useLandscapePdf = registroMatches.length > 10
+    const pdfOrientation = useLandscapePdf ? 'landscape' : 'portrait'
+    const pdfContentWidth = useLandscapePdf ? '10.64in' : '8.14in'
+    const idColumnWidth = useLandscapePdf ? 9 : 11
+    const nameColumnWidth = useLandscapePdf ? 18 : 20
+    const pointsColumnWidth = useLandscapePdf ? 5 : 6
+    const matchesWidth = 100 - idColumnWidth - nameColumnWidth - pointsColumnWidth
+    const matchColumnWidth = matchesWidth / matchCount
+    const colgroup = document.createElement('colgroup')
+    const addPdfColumn = (className: string, width: number) => {
+      const column = document.createElement('col')
+      column.className = className
+      column.style.width = `${width}%`
+      colgroup.appendChild(column)
+    }
+
+    addPdfColumn('pdf-id-column', idColumnWidth)
+    addPdfColumn('pdf-name-column', nameColumnWidth)
+    registroMatches.forEach(() => addPdfColumn('pdf-match-column', matchColumnWidth))
+    addPdfColumn('pdf-points-column', pointsColumnWidth)
+    clonedTable.prepend(colgroup)
 
     const pdfWindow = window.open('', '_blank')
 
@@ -1480,7 +1509,7 @@ function App() {
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600;700&display=swap');
 
-            @page { size: letter portrait; margin: 12px 10px 16px; }
+            @page { size: letter ${pdfOrientation}; margin: 0.18in 0.18in 0.28in; }
             *,
             *::before,
             *::after {
@@ -1498,12 +1527,14 @@ function App() {
               font-family: 'Barlow', Arial, Helvetica, sans-serif;
             }
             .pdf-shell {
-              width: 100%;
+              width: ${pdfContentWidth};
+              max-width: 100%;
               overflow: visible;
               background: #ffffff !important;
             }
             .pdf-fit {
-              width: 100%;
+              width: ${pdfContentWidth};
+              max-width: 100%;
             }
             .pdf-top {
               display: grid;
@@ -1578,12 +1609,14 @@ function App() {
               border: 1px solid rgba(0, 0, 0, 0.75);
               background: #f4f7fb !important;
               box-shadow: none;
-              width: 100%;
-              max-width: 100%;
+              width: ${pdfContentWidth} !important;
+              min-width: ${pdfContentWidth} !important;
+              max-width: ${pdfContentWidth} !important;
             }
             .registro-table {
-              width: 100%;
-              min-width: 100%;
+              width: ${pdfContentWidth} !important;
+              min-width: ${pdfContentWidth} !important;
+              max-width: ${pdfContentWidth} !important;
               table-layout: fixed;
               border-collapse: collapse;
               background: #ffffff !important;
@@ -1596,17 +1629,10 @@ function App() {
             .registro-desktop-head-row {
               display: table-row !important;
             }
-            .registro-table .registro-id-col {
-              width: 11%;
-            }
-            .registro-table .registro-name-col {
-              width: 17%;
-            }
-            .registro-table .registro-points-col {
-              width: 6%;
-            }
+            .registro-table .registro-id-col,
+            .registro-table .registro-name-col,
+            .registro-table .registro-points-col,
             .registro-table .registro-match-col {
-              width: calc(66% / var(--pdf-match-count));
               min-width: 0;
               max-width: none;
             }
@@ -1618,7 +1644,7 @@ function App() {
               padding: 0 1px;
               text-align: center;
               font-family: 'Barlow Condensed', Arial, Helvetica, sans-serif;
-              font-size: 6px;
+              font-size: 6.5pt;
               letter-spacing: 0.4px;
               text-transform: uppercase;
               border: 1px solid #101010;
@@ -1669,13 +1695,13 @@ function App() {
             }
             .registro-table tbody td {
               height: auto;
-              padding: 2px 1px;
+              padding: 1.5px 1px;
               text-align: center;
               border: 1px solid #101010;
               color: #050505 !important;
               font-family: 'Barlow Condensed', Arial, Helvetica, sans-serif;
-              font-size: 9px;
-              line-height: 1;
+              font-size: 7.5pt;
+              line-height: 1.05;
               font-weight: 800;
               vertical-align: middle;
               background: #ffffff !important;
@@ -1693,7 +1719,7 @@ function App() {
             }
             .registro-id-col,
             .registro-name-col {
-              overflow-wrap: normal;
+              overflow-wrap: anywhere;
             }
             .registro-name-col {
               white-space: normal;
@@ -1739,12 +1765,12 @@ function App() {
             @media print {
               body { min-width: 0; }
               .pdf-shell,
-              .pdf-fit { width: 100%; }
+              .pdf-fit { width: ${pdfContentWidth}; max-width: 100%; }
             }
           </style>
         </head>
         <body>
-          <div class="pdf-shell" style="--pdf-match-count: ${Math.max(registroMatches.length, 1)}">
+          <div class="pdf-shell">
             <div class="pdf-fit">
               <div class="pdf-top">
                 <img class="pdf-logo" src="/logo.png" alt="Pronosticos Entre Cuates" />
