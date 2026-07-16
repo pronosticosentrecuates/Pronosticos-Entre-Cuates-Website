@@ -1442,7 +1442,7 @@ function App() {
       .replace(/'/g, '&#039;')
   }
 
-  const exportRegistroPdf = () => {
+  const exportRegistroPdf = async () => {
     if (registroRankingRows.length === 0) {
       window.alert('No hay quinielas para exportar con los filtros actuales.')
       return
@@ -1451,6 +1451,195 @@ function App() {
     const tournamentName = jornada?.tournamentId ? tournaments.find((item) => item.id === jornada.tournamentId)?.nombre : ''
     const pdfTitle = jornadaTitle.toUpperCase()
     const pdfSubtitle = tournamentName ? `${tournamentName.toUpperCase()} - ${pdfTitle}` : pdfTitle
+
+    try {
+      const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+        import('jspdf'),
+        import('jspdf-autotable'),
+      ])
+      const useLandscapePdf = registroMatches.length > 10
+      const pdf = new jsPDF({
+        orientation: useLandscapePdf ? 'landscape' : 'portrait',
+        unit: 'pt',
+        format: 'letter',
+        compress: true,
+        putOnlyUsedFonts: true,
+      })
+      const pageWidth = pdf.internal.pageSize.getWidth()
+      const pageHeight = pdf.internal.pageSize.getHeight()
+      const marginX = 16
+      const tableWidth = pageWidth - marginX * 2
+      const matchCount = Math.max(registroMatches.length, 1)
+      const idColumnWidth = useLandscapePdf ? 66 : 70
+      const nameColumnWidth = useLandscapePdf ? 122 : 112
+      const pointsColumnWidth = 32
+      const matchColumnWidth = Math.max(
+        24,
+        (tableWidth - idColumnWidth - nameColumnWidth - pointsColumnWidth) / matchCount,
+      )
+      const pdfTeamLabel = (teamName: string) => teamName
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9]/g, '')
+        .slice(0, 3)
+        .toUpperCase()
+      const matchHeaders = registroMatches.map((match) => (
+        `${pdfTeamLabel(match.local)}\nvs\n${pdfTeamLabel(match.visitante)}`
+      ))
+      const pointTotals = registroRankingRows.map((quiniela) => countQuinielaPoints(quiniela, registroMatches))
+      const maxPoints = pointTotals.length > 0 ? Math.max(...pointTotals) : 0
+      const minPoints = pointTotals.length > 0 ? Math.min(...pointTotals) : 0
+      const hasPointSpread = maxPoints > minPoints
+      const body = registroRankingRows.map((quiniela, rowIndex) => [
+        String(quiniela.folio ?? quiniela.id),
+        quiniela.nombre,
+        ...registroMatches.map((match) => {
+          const selection = quiniela.selecciones.find((item) => item.partidoId === match.id)
+          return selection ? formatSelection(selection) : '-'
+        }),
+        String(pointTotals[rowIndex]),
+      ])
+      const columnStyles: Record<number, { cellWidth: number; halign?: 'left' | 'center' | 'right' }> = {
+        0: { cellWidth: idColumnWidth, halign: 'center' },
+        1: { cellWidth: nameColumnWidth, halign: 'left' },
+      }
+
+      registroMatches.forEach((_, index) => {
+        columnStyles[index + 2] = { cellWidth: matchColumnWidth, halign: 'center' }
+      })
+      columnStyles[registroMatches.length + 2] = { cellWidth: pointsColumnWidth, halign: 'center' }
+
+      try {
+        const logoResponse = await fetch('/logo.png', { cache: 'force-cache' })
+        if (logoResponse.ok) {
+          const logoBlob = await logoResponse.blob()
+          const logoDataUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.addEventListener('load', () => resolve(String(reader.result)), { once: true })
+            reader.addEventListener('error', () => reject(reader.error), { once: true })
+            reader.readAsDataURL(logoBlob)
+          })
+          pdf.addImage(logoDataUrl, 'PNG', marginX, 7, 48, 48, undefined, 'FAST')
+        }
+      } catch (logoError) {
+        console.warn('No se pudo agregar el logo al PDF.', logoError)
+      }
+
+      pdf.setTextColor(5, 5, 5)
+      pdf.setFont('helvetica', 'bold')
+      pdf.setFontSize(7)
+      pdf.text(`Personas en primer lugar: ${registroFirstPlaceCount}`, marginX, 62)
+      pdf.text(`Personas con 0 aciertos: ${registroZeroPointsCount}`, marginX, 70)
+      pdf.setTextColor(255, 16, 16)
+      pdf.setFontSize(useLandscapePdf ? 18 : 16)
+      pdf.text('PRONOSTICOS ENTRE CUATES', pageWidth / 2, 80, { align: 'center' })
+      pdf.setFillColor(7, 0, 109)
+      pdf.rect(marginX, 86, tableWidth, 19, 'F')
+      pdf.setTextColor(255, 255, 255)
+      pdf.setFontSize(useLandscapePdf ? 17 : 15)
+      pdf.text('SUERTE A TODOS LOS PARTICIPANTES', pageWidth / 2, 100, { align: 'center' })
+      pdf.setTextColor(5, 5, 5)
+      pdf.setFontSize(12)
+      pdf.text(`1° LUGAR ${firstPrizeLabel}  /  2° LUGAR ${secondPrizeLabel}`, pageWidth / 2, 118, { align: 'center' })
+      pdf.setFillColor(7, 0, 109)
+      pdf.rect(marginX, 124, tableWidth, 14, 'F')
+      pdf.setTextColor(255, 255, 255)
+      pdf.setFontSize(8)
+      pdf.text(pdfSubtitle, pageWidth / 2, 134, { align: 'center' })
+
+      autoTable(pdf, {
+        startY: 138,
+        margin: { top: 18, right: marginX, bottom: 24, left: marginX },
+        head: [['ID', 'NOMBRE', ...matchHeaders, 'PTS']],
+        body,
+        showHead: 'everyPage',
+        theme: 'grid',
+        tableWidth,
+        styles: {
+          font: 'helvetica',
+          fontSize: useLandscapePdf ? 6.5 : 6.2,
+          fontStyle: 'bold',
+          cellPadding: { top: 1.8, right: 1.2, bottom: 1.8, left: 1.2 },
+          lineColor: [15, 15, 15],
+          lineWidth: 0.35,
+          textColor: [5, 5, 5],
+          valign: 'middle',
+          overflow: 'linebreak',
+        },
+        headStyles: {
+          fillColor: [7, 0, 109],
+          textColor: [255, 255, 255],
+          fontSize: useLandscapePdf ? 5.8 : 5.4,
+          fontStyle: 'bold',
+          halign: 'center',
+          valign: 'middle',
+          minCellHeight: 24,
+        },
+        bodyStyles: {
+          fillColor: [255, 255, 255],
+          minCellHeight: 10,
+        },
+        alternateRowStyles: {
+          fillColor: [247, 247, 247],
+        },
+        columnStyles,
+        didParseCell: (data) => {
+          if (data.section !== 'body') return
+          const rowIndex = data.row.index
+          const matchIndex = data.column.index - 2
+
+          if (matchIndex >= 0 && matchIndex < registroMatches.length) {
+            const quiniela = registroRankingRows[rowIndex]
+            const match = registroMatches[matchIndex]
+            const selection = quiniela?.selecciones.find((item) => item.partidoId === match.id)
+            const outcome = getMatchOutcome(match.localScore ?? null, match.visitanteScore ?? null)
+            if (outcome && selection?.seleccion.includes(outcome)) {
+              data.cell.styles.fillColor = [16, 214, 120]
+            }
+          }
+
+          if (data.column.index === registroMatches.length + 2) {
+            const points = pointTotals[rowIndex]
+            data.cell.styles.fillColor = hasPointSpread && points === maxPoints
+              ? [16, 214, 120]
+              : hasPointSpread && points === minPoints
+                ? [255, 77, 79]
+                : [255, 242, 0]
+            data.cell.styles.textColor = hasPointSpread && points === minPoints ? [255, 255, 255] : [0, 0, 0]
+          }
+        },
+      })
+
+      const pageCount = pdf.getNumberOfPages()
+      for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
+        pdf.setPage(pageNumber)
+        pdf.setFont('helvetica', 'normal')
+        pdf.setFontSize(7)
+        pdf.setTextColor(45, 45, 45)
+        pdf.text('Pronosticos Entre Cuates', marginX, pageHeight - 9)
+        pdf.text(`Pagina ${pageNumber} de ${pageCount}`, pageWidth - marginX, pageHeight - 9, { align: 'right' })
+      }
+
+      const safeTitle = jornadaTitle
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .toLowerCase() || 'jornada'
+      const pdfUrl = URL.createObjectURL(pdf.output('blob'))
+      const downloadLink = document.createElement('a')
+      downloadLink.href = pdfUrl
+      downloadLink.download = `pronosticos-${safeTitle}.pdf`
+      document.body.appendChild(downloadLink)
+      downloadLink.click()
+      downloadLink.remove()
+      window.setTimeout(() => URL.revokeObjectURL(pdfUrl), 30_000)
+      setToast({ message: 'PDF generado y descargado.', kind: 'success' })
+      return
+    } catch (directPdfError) {
+      console.error('No se pudo generar el PDF directo; se usara el dialogo de impresion.', directPdfError)
+    }
+
     const tableWrap = document.querySelector('.registro-card .registro-table-wrap')
     const clonedTableWrap = tableWrap?.cloneNode(true) as HTMLElement | null
 
