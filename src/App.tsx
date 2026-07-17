@@ -1465,6 +1465,8 @@ function App() {
         compress: true,
         putOnlyUsedFonts: true,
       })
+
+      
       const pageWidth = pdf.internal.pageSize.getWidth()
       const pageHeight = pdf.internal.pageSize.getHeight()
       const marginX = 16
@@ -1609,6 +1611,8 @@ function App() {
           }
         },
       })
+
+      /* Prueba */
 
       const pageCount = pdf.getNumberOfPages()
       for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
