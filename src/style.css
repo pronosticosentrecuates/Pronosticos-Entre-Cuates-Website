@@ -5130,6 +5130,45 @@ select.rp-input option {
   justify-content: flex-end;
 }
 
+#admin-shell .match-create-row .mcr-actions .match-icon-btn {
+  color: var(--white);
+  width: auto;
+  min-width: 88px;
+  height: 34px;
+  padding: 0 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  overflow: hidden;
+  text-indent: 0;
+}
+
+#admin-shell .match-create-row .mcr-actions .edit-icon-action.match-icon-btn::before {
+  content: "\270e";
+  width: auto;
+  height: auto;
+  flex: 0 0 auto;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #e8edf5;
+  font-size: 16px;
+  line-height: 1;
+  transform: none;
+}
+
+#admin-shell .match-create-row .mcr-actions .edit-icon-action.match-icon-btn::after {
+  content: none;
+}
+
+#admin-shell .match-create-row .mcr-actions .match-delete-icon::before {
+  content: "\1F5D1";
+  flex: 0 0 auto;
+  font-size: 15px;
+  line-height: 1;
+}
+
 @media (max-width: 1180px) {
   .admin-topbar {
     height: auto;
