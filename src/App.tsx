@@ -714,13 +714,14 @@ function App() {
   const firstPrizeLabel = formatPrizeLabel(jornada?.firstPrize, APP_CONFIG.firstPrize)
   const secondPrizeLabel = formatPrizeLabel(jornada?.secondPrize, APP_CONFIG.secondPrize)
   const openJornadaId = registrosAbiertos ? jornada?.id ?? null : null
+  const registroJornadaId = jornada?.status !== 'finished' ? jornada?.id ?? null : null
   const registroMatches = useMemo(
-    () => openJornadaId ? matches.filter((match) => match.jornadaId === openJornadaId || (!match.jornadaId && jornada?.id === openJornadaId)) : [],
-    [jornada?.id, matches, openJornadaId],
+    () => registroJornadaId ? matches.filter((match) => match.jornadaId === registroJornadaId || (!match.jornadaId && jornada?.id === registroJornadaId)) : [],
+    [jornada?.id, matches, registroJornadaId],
   )
   const registroQuinielas = useMemo(
-    () => openJornadaId ? publicApprovedQuinielas.filter((quiniela) => quiniela.jornadaId === openJornadaId) : [],
-    [openJornadaId, publicApprovedQuinielas],
+    () => registroJornadaId ? publicApprovedQuinielas.filter((quiniela) => quiniela.jornadaId === registroJornadaId) : [],
+    [publicApprovedQuinielas, registroJornadaId],
   )
   const registroPointTotals = registroQuinielas.map((quiniela) => countQuinielaPoints(quiniela, registroMatches))
   const registroMaxPoints = registroPointTotals.length > 0 ? Math.max(...registroPointTotals) : 0
@@ -2850,7 +2851,7 @@ function App() {
               </article>
               <article>
                 <span>Partidos</span>
-                <strong>{matches.length}</strong>
+                <strong>{registroMatches.length}</strong>
               </article>
               <article>
                 <span>Personas en primer lugar</span>
@@ -2890,7 +2891,7 @@ function App() {
             </div>
 
             {registroQuinielas.length === 0 ? (
-              <div className="registro-empty">{openJornadaId ? 'Todavia no hay quinielas aprobadas para esta jornada.' : 'No hay una jornada abierta en este momento.'}</div>
+              <div className="registro-empty">{registroJornadaId ? 'Todavia no hay quinielas aprobadas para esta jornada.' : 'No hay una jornada vigente en este momento.'}</div>
             ) : registroRankingRows.length === 0 ? (
               <div className="registro-empty">No hay quinielas que coincidan con los filtros.</div>
             ) : (
