@@ -2566,7 +2566,7 @@ function App() {
             </svg>
             Facebook
           </a>
-          <a className="social-btn social-whatsapp" href={`https://wa.me/${WHATSAPP_DESTINATION_URL}`} onClick={() => setNavOpen(false)} rel="noopener noreferrer" target="_blank">
+          <a className="social-btn social-whatsapp" href={WHATSAPP_DESTINATION_URL} onClick={() => setNavOpen(false)} rel="noopener noreferrer" target="_blank">
             <svg className="social-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path d="M12.1 2a9.8 9.8 0 0 0-8.4 14.9L2.5 22l5.3-1.2A9.9 9.9 0 1 0 12.1 2Zm0 2a7.9 7.9 0 1 1-3.9 14.8l-.4-.2-3 .7.7-2.9-.3-.5A7.8 7.8 0 0 1 12.1 4Zm-3.4 4.2c-.2 0-.5.1-.7.4-.2.3-.9.9-.9 2.1 0 1.3.9 2.5 1 2.7.1.2 1.8 2.8 4.4 3.8 2.2.9 2.7.7 3.2.6.5-.1 1.6-.7 1.8-1.3.2-.6.2-1.1.2-1.2-.1-.1-.2-.2-.5-.4l-1.7-.8c-.3-.1-.5-.1-.7.2l-.7.9c-.2.2-.4.2-.7.1-1-.4-1.9-.9-2.6-1.7-.6-.7-.9-1.2-1.1-1.6-.1-.3 0-.4.1-.6l.4-.5c.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5l-.8-1.8c-.2-.5-.4-.5-.6-.5h-.4Z" />
             </svg>
@@ -2724,13 +2724,14 @@ function App() {
 
                 <div className="input-block">
                   <div className="input-label">Tu Nombre</div>
-                  <input className="input-field" id="input-name" placeholder="Ingresa tu nombre completo" value={nombre} onChange={(event) => setNombre(event.target.value)} />
+                  <input className="input-field" disabled={!registrosAbiertos} id="input-name" placeholder="Ingresa tu nombre completo" value={nombre} onChange={(event) => setNombre(event.target.value)} />
                 </div>
 
                 <div className="input-block">
                   <div className="input-label">Celular</div>
                   <input
                     className="input-field"
+                    disabled={!registrosAbiertos}
                     id="input-phone"
                     inputMode="numeric"
                     pattern="[0-9]*"

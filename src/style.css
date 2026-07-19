@@ -865,6 +865,11 @@ body {
   box-shadow: 0 0 0 3px rgba(30, 136, 229, 0.2);
 }
 
+.input-field:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .mode-options {
   display: flex;
   gap: 10px;
