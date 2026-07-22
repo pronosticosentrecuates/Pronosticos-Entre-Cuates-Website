@@ -376,6 +376,7 @@ function App() {
   const [showJornadaModal, setShowJornadaModal] = useState(false)
   const [showAddMatchModal, setShowAddMatchModal] = useState(false)
   const [showLigaMxImportModal, setShowLigaMxImportModal] = useState(false)
+  const [exportingJornadaId, setExportingJornadaId] = useState<number | null>(null)
   const [rankingModalFilter, setRankingModalFilter] = useState<'all' | Modalidad>('all')
   const [rankingSortOrder, setRankingSortOrder] = useState<'desc' | 'asc'>('desc')
   const [lookupFolio, setLookupFolio] = useState('')
@@ -1433,6 +1434,218 @@ function App() {
     if (status === 'accepted') return 'Aceptada'
     if (status === 'cancelled') return 'Rechazada'
     return 'Pendiente'
+  }
+
+  const exportJornadaQuinielasPdf = async (item: Jornada) => {
+    setExportingJornadaId(item.id)
+
+    try {
+      const [loadedQuinielas, jornadaMatches] = await Promise.all([
+        loadQuinielas(item.id),
+        loadMatches(item.id),
+      ])
+      const jornadaQuinielas = loadedQuinielas.sort((a, b) => a.id - b.id)
+
+      if (jornadaQuinielas.length === 0) {
+        window.alert('Esta jornada no tiene quinielas registradas.')
+        return
+      }
+
+      const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+        import('jspdf'),
+        import('jspdf-autotable'),
+      ])
+      const tournamentName = tournaments.find((tournament) => tournament.id === item.tournamentId)?.nombre ?? ''
+      const pdfTitle = item.nombre.toUpperCase()
+      const pdfSubtitle = tournamentName ? `${tournamentName.toUpperCase()} - ${pdfTitle}` : pdfTitle
+      const targetFirstPrizeLabel = formatPrizeLabel(item.firstPrize, APP_CONFIG.firstPrize)
+      const targetSecondPrizeLabel = formatPrizeLabel(item.secondPrize, APP_CONFIG.secondPrize)
+      const useLandscapePdf = jornadaMatches.length > 10
+      const pdf = new jsPDF({
+        orientation: useLandscapePdf ? 'landscape' : 'portrait',
+        unit: 'pt',
+        format: 'letter',
+        compress: true,
+        putOnlyUsedFonts: true,
+      })
+      const pageWidth = pdf.internal.pageSize.getWidth()
+      const pageHeight = pdf.internal.pageSize.getHeight()
+      const marginX = 16
+      const tableWidth = pageWidth - marginX * 2
+      const matchCount = Math.max(jornadaMatches.length, 1)
+      const idColumnWidth = useLandscapePdf ? 66 : 70
+      const nameColumnWidth = useLandscapePdf ? 122 : 112
+      const pointsColumnWidth = 32
+      const matchColumnWidth = Math.max(
+        24,
+        (tableWidth - idColumnWidth - nameColumnWidth - pointsColumnWidth) / matchCount,
+      )
+      const pdfTeamLabel = (teamName: string) => teamName
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9]/g, '')
+        .slice(0, 3)
+        .toUpperCase()
+      const matchHeaders = jornadaMatches.map((match) => (
+        `${pdfTeamLabel(match.local)}\nvs\n${pdfTeamLabel(match.visitante)}`
+      ))
+      const pointTotals = jornadaQuinielas.map((quiniela) => countQuinielaPoints(quiniela, jornadaMatches))
+      const maxPoints = pointTotals.length > 0 ? Math.max(...pointTotals) : 0
+      const minPoints = pointTotals.length > 0 ? Math.min(...pointTotals) : 0
+      const firstPlaceCount = pointTotals.filter((points) => points === maxPoints).length
+      const zeroPointsCount = pointTotals.filter((points) => points === 0).length
+      const hasPointSpread = maxPoints > minPoints
+      const body = jornadaQuinielas.map((quiniela, rowIndex) => [
+        String(quiniela.folio ?? quiniela.id),
+        quiniela.nombre,
+        ...jornadaMatches.map((match) => {
+          const selection = quiniela.selecciones.find((entry) => entry.partidoId === match.id)
+          return selection ? formatSelection(selection) : '-'
+        }),
+        String(pointTotals[rowIndex]),
+      ])
+      const columnStyles: Record<number, { cellWidth: number; halign?: 'left' | 'center' | 'right' }> = {
+        0: { cellWidth: idColumnWidth, halign: 'center' },
+        1: { cellWidth: nameColumnWidth, halign: 'left' },
+      }
+
+      jornadaMatches.forEach((_, index) => {
+        columnStyles[index + 2] = { cellWidth: matchColumnWidth, halign: 'center' }
+      })
+      columnStyles[jornadaMatches.length + 2] = { cellWidth: pointsColumnWidth, halign: 'center' }
+
+      try {
+        const logoResponse = await fetch('/logo.png', { cache: 'force-cache' })
+        if (logoResponse.ok) {
+          const logoBlob = await logoResponse.blob()
+          const logoDataUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.addEventListener('load', () => resolve(String(reader.result)), { once: true })
+            reader.addEventListener('error', () => reject(reader.error), { once: true })
+            reader.readAsDataURL(logoBlob)
+          })
+          pdf.addImage(logoDataUrl, 'PNG', marginX, 7, 48, 48, undefined, 'FAST')
+        }
+      } catch (logoError) {
+        console.warn('No se pudo agregar el logo al PDF de la jornada.', logoError)
+      }
+
+      pdf.setTextColor(5, 5, 5)
+      pdf.setFont('helvetica', 'bold')
+      pdf.setFontSize(7)
+      pdf.text(`Personas en primer lugar: ${firstPlaceCount}`, marginX, 62)
+      pdf.text(`Personas con 0 aciertos: ${zeroPointsCount}`, marginX, 70)
+      pdf.setTextColor(255, 16, 16)
+      pdf.setFontSize(useLandscapePdf ? 18 : 16)
+      pdf.text('PRONOSTICOS ENTRE CUATES', pageWidth / 2, 80, { align: 'center' })
+      pdf.setFillColor(7, 0, 109)
+      pdf.rect(marginX, 86, tableWidth, 19, 'F')
+      pdf.setTextColor(255, 255, 255)
+      pdf.setFontSize(useLandscapePdf ? 17 : 15)
+      pdf.text('SUERTE A TODOS LOS PARTICIPANTES', pageWidth / 2, 100, { align: 'center' })
+      pdf.setTextColor(5, 5, 5)
+      pdf.setFontSize(12)
+      pdf.text(`1° LUGAR ${targetFirstPrizeLabel}  /  2° LUGAR ${targetSecondPrizeLabel}`, pageWidth / 2, 118, { align: 'center' })
+      pdf.setFillColor(7, 0, 109)
+      pdf.rect(marginX, 124, tableWidth, 14, 'F')
+      pdf.setTextColor(255, 255, 255)
+      pdf.setFontSize(8)
+      pdf.text(pdfSubtitle, pageWidth / 2, 134, { align: 'center' })
+
+      autoTable(pdf, {
+        startY: 138,
+        margin: { top: 18, right: marginX, bottom: 24, left: marginX },
+        head: [['ID', 'NOMBRE', ...matchHeaders, 'PTS']],
+        body,
+        showHead: 'everyPage',
+        theme: 'grid',
+        tableWidth,
+        styles: {
+          font: 'helvetica',
+          fontSize: useLandscapePdf ? 6.5 : 6.2,
+          fontStyle: 'bold',
+          cellPadding: { top: 1.8, right: 1.2, bottom: 1.8, left: 1.2 },
+          lineColor: [15, 15, 15],
+          lineWidth: 0.35,
+          textColor: [5, 5, 5],
+          valign: 'middle',
+          overflow: 'linebreak',
+        },
+        headStyles: {
+          fillColor: [7, 0, 109],
+          textColor: [255, 255, 255],
+          fontSize: useLandscapePdf ? 5.8 : 5.4,
+          fontStyle: 'bold',
+          halign: 'center',
+          valign: 'middle',
+          minCellHeight: 22,
+        },
+        bodyStyles: {
+          fillColor: [255, 255, 255],
+          minCellHeight: 10,
+        },
+        alternateRowStyles: {
+          fillColor: [247, 247, 247],
+        },
+        columnStyles,
+        didParseCell: (data) => {
+          if (data.section !== 'body') return
+          const rowIndex = data.row.index
+          const matchIndex = data.column.index - 2
+
+          if (matchIndex >= 0 && matchIndex < jornadaMatches.length) {
+            const quiniela = jornadaQuinielas[rowIndex]
+            const match = jornadaMatches[matchIndex]
+            const selection = quiniela?.selecciones.find((entry) => entry.partidoId === match.id)
+            const outcome = getMatchOutcome(match.localScore ?? null, match.visitanteScore ?? null)
+            if (outcome && selection?.seleccion.includes(outcome)) {
+              data.cell.styles.fillColor = [16, 214, 120]
+            }
+          }
+
+          if (data.column.index === jornadaMatches.length + 2) {
+            const points = pointTotals[rowIndex]
+            data.cell.styles.fillColor = hasPointSpread && points === maxPoints
+              ? [16, 214, 120]
+              : hasPointSpread && points === minPoints
+                ? [255, 77, 79]
+                : [255, 242, 0]
+            data.cell.styles.textColor = hasPointSpread && points === minPoints ? [255, 255, 255] : [0, 0, 0]
+          }
+        },
+      })
+
+      const pageCount = pdf.getNumberOfPages()
+      for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
+        pdf.setPage(pageNumber)
+        pdf.setFont('helvetica', 'normal')
+        pdf.setFontSize(7)
+        pdf.setTextColor(45, 45, 45)
+        pdf.text('Pronosticos Entre Cuates', marginX, pageHeight - 9)
+        pdf.text(`Pagina ${pageNumber} de ${pageCount}`, pageWidth - marginX, pageHeight - 9, { align: 'right' })
+      }
+
+      const safeTitle = item.nombre
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .toLowerCase() || `jornada-${item.id}`
+      const pdfUrl = URL.createObjectURL(pdf.output('blob'))
+      const downloadLink = document.createElement('a')
+      downloadLink.href = pdfUrl
+      downloadLink.download = `pronosticos-${safeTitle}.pdf`
+      document.body.appendChild(downloadLink)
+      downloadLink.click()
+      downloadLink.remove()
+      window.setTimeout(() => URL.revokeObjectURL(pdfUrl), 30_000)
+      setToast({ message: `PDF de ${item.nombre} descargado.`, kind: 'success' })
+    } catch (error) {
+      console.error('No se pudo generar el PDF de la jornada.', error)
+      setToast({ message: 'No se pudo generar el PDF de la jornada.', kind: 'error' })
+    } finally {
+      setExportingJornadaId(null)
+    }
   }
 
   const escapePdfText = (value: string | number | null | undefined) => {
@@ -3539,9 +3752,18 @@ function App() {
                                 <span>Apertura: {item.openAt ? new Date(item.openAt).toLocaleString('es-MX') : 'Manual'}</span>
                                 <span>{item.closeAt ? new Date(item.closeAt).toLocaleString('es-MX') : 'Sin cierre programado'}</span>
                                 <span>Premios: ${item.firstPrize} / ${item.secondPrize}</span>
+                                <span>Quinielas registradas: {quinielas.filter((quiniela) => quiniela.jornadaId === item.id).length}</span>
                               </div>
                               <div className="acts-cell">
                                 <span className={`status-badge ${item.status}`}>{item.status}</span>
+                                <button
+                                  className="act-btn download"
+                                  disabled={exportingJornadaId !== null}
+                                  onClick={() => void exportJornadaQuinielasPdf(item)}
+                                  type="button"
+                                >
+                                  {exportingJornadaId === item.id ? 'Generando PDF...' : 'Descargar PDF'}
+                                </button>
                                 <button className="act-btn" onClick={() => startEditJornada(item)} type="button">Editar</button>
                                 {item.status === 'draft' ? (
                                   <button className="act-btn publish" onClick={() => handleJornadaStatus(item, 'open')} type="button">Publicar</button>
@@ -3552,7 +3774,15 @@ function App() {
                                 <button className="act-btn cancel" onClick={() => handleJornadaStatus(item, 'closed')} type="button">Cerrar</button>
                                 <button className="act-btn" onClick={() => handleDistributePrizes(item)} type="button">Repartir premios</button>
                                 <button className="act-btn accept" onClick={() => handleJornadaStatus(item, 'finished')} type="button">Finalizar</button>
-                                <button className="act-btn delete" onClick={() => deleteJornada(item)} type="button">Eliminar</button>
+                                <button
+                                  className="act-btn delete"
+                                  disabled={quinielas.some((quiniela) => quiniela.jornadaId === item.id)}
+                                  onClick={() => deleteJornada(item)}
+                                  title={quinielas.some((quiniela) => quiniela.jornadaId === item.id) ? 'No se puede eliminar una jornada con quinielas registradas.' : 'Eliminar jornada'}
+                                  type="button"
+                                >
+                                  Eliminar
+                                </button>
                               </div>
                             </article>
                           ))}

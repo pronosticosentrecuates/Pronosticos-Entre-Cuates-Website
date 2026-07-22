@@ -4954,6 +4954,22 @@ select.rp-input option {
   font-size: 12px;
 }
 
+.jornada-item .act-btn.download {
+  color: var(--cyan);
+  border-color: rgba(0, 210, 255, 0.4);
+  background: rgba(0, 210, 255, 0.08);
+}
+
+.jornada-item .act-btn.download:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.jornada-item .act-btn.delete:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .jornada-edit-grid {
   flex: 1;
   display: grid;
@@ -5778,17 +5794,22 @@ select.rp-input option {
     line-height: 1;
   }
 
-  .jornada-item .acts-cell .act-btn:nth-of-type(1)::before {
+  .jornada-item .acts-cell .act-btn.download::before {
+    content: "\2193";
+    color: var(--cyan);
+  }
+
+  .jornada-item .acts-cell .act-btn:nth-of-type(2)::before {
     content: "\270e";
     color: #e8edf5;
   }
 
-  .jornada-item .acts-cell .act-btn:nth-of-type(2)::before {
+  .jornada-item .acts-cell .act-btn:nth-of-type(3)::before {
     content: "\1F513";
     font-size: 15px;
   }
 
-  .jornada-item .acts-cell .act-btn:nth-of-type(4)::before {
+  .jornada-item .acts-cell .act-btn:nth-of-type(5)::before {
     content: "\0024";
     color: var(--green);
   }

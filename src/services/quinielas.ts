@@ -360,28 +360,11 @@ export async function deleteJornadaById(id: number) {
     .from('quinielas')
     .select('id')
     .eq('jornada_id', id)
+    .limit(1)
   if (quinielasLookupError) throw quinielasLookupError
 
-  const quinielaIds = (jornadaQuinielas ?? []).map((row) => Number(row.id))
-
-  if (quinielaIds.length > 0) {
-    const { error: combinationsError } = await supabase
-      .from('combinations')
-      .delete()
-      .in('quiniela_id', quinielaIds)
-    if (combinationsError) throw combinationsError
-
-    const { error: selectionsError } = await supabase
-      .from('selections')
-      .delete()
-      .in('quiniela_id', quinielaIds)
-    if (selectionsError) throw selectionsError
-
-    const { error: quinielasError } = await supabase
-      .from('quinielas')
-      .delete()
-      .in('id', quinielaIds)
-    if (quinielasError) throw quinielasError
+  if ((jornadaQuinielas ?? []).length > 0) {
+    throw new Error('No se puede eliminar una jornada con quinielas registradas. Cierrala o finalizala para conservar el historial.')
   }
 
   const { data: jornadaMatches, error: matchesLookupError } = await supabase
