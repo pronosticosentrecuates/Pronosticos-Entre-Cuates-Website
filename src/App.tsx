@@ -364,6 +364,7 @@ function App() {
   const [adminStatusFilter, setAdminStatusFilter] = useState<'all' | QuinielaStatus>('all')
   const [adminModalFilter, setAdminModalFilter] = useState<'all' | Modalidad>('all')
   const [adminPaymentFilter, setAdminPaymentFilter] = useState<'all' | PaymentStatus>('all')
+  const [adminDateOrder, setAdminDateOrder] = useState<'newest' | 'oldest'>('newest')
   const [adminEditQuinielaId, setAdminEditQuinielaId] = useState<number | null>(null)
   const [adminQuinielaNombre, setAdminQuinielaNombre] = useState('')
   const [adminQuinielaCelular, setAdminQuinielaCelular] = useState('')
@@ -763,15 +764,22 @@ function App() {
   const adminQuinielaCompleta = adminQuinielaMatches.length > 0 && validateQuinielaCompleta(adminVisibleQuinielaSelections, adminQuinielaMatches)
   const adminQuinielaNombreValido = isValidName(adminQuinielaNombre)
   const adminQuinielaCelularValido = isValidPhone(adminQuinielaCelular)
-  const filteredAdminQuinielas = quinielas.filter((quiniela) => {
-    const q = adminSearch.toLowerCase()
-    const matchSearch = !q || quiniela.nombre.toLowerCase().includes(q) || quiniela.celular.includes(q)
-    const matchStatus = adminStatusFilter === 'all' || quiniela.status === adminStatusFilter
-    const matchModal = adminModalFilter === 'all' || quiniela.modalidad === adminModalFilter
-    const matchPayment = adminPaymentFilter === 'all' || quiniela.paymentStatus === adminPaymentFilter
+  const filteredAdminQuinielas = quinielas
+    .filter((quiniela) => {
+      const q = adminSearch.toLowerCase()
+      const matchSearch = !q || quiniela.nombre.toLowerCase().includes(q) || quiniela.celular.includes(q)
+      const matchStatus = adminStatusFilter === 'all' || quiniela.status === adminStatusFilter
+      const matchModal = adminModalFilter === 'all' || quiniela.modalidad === adminModalFilter
+      const matchPayment = adminPaymentFilter === 'all' || quiniela.paymentStatus === adminPaymentFilter
 
-    return matchSearch && matchStatus && matchModal && matchPayment
-  })
+      return matchSearch && matchStatus && matchModal && matchPayment
+    })
+    .sort((a, b) => {
+      const dateDifference = new Date(a.fechaRegistro).getTime() - new Date(b.fechaRegistro).getTime()
+      const order = dateDifference || a.id - b.id
+
+      return adminDateOrder === 'newest' ? -order : order
+    })
   const confirmQuiniela = confirmAction ? quinielas.find((quiniela) => quiniela.id === confirmAction.id) : null
 
   const renderTeamLogo = (teamName: string, fallback: string, className: string) => {
@@ -3207,6 +3215,10 @@ function App() {
                             <option value="pending">Pago pendiente</option>
                             <option value="paid">Pagada</option>
                             <option value="refunded">Reembolsada</option>
+                          </select>
+                          <select className="filter-select" aria-label="Ordenar quinielas por fecha" value={adminDateOrder} onChange={(event) => setAdminDateOrder(event.target.value as 'newest' | 'oldest')}>
+                            <option value="newest">Más recientes</option>
+                            <option value="oldest">Menos recientes</option>
                           </select>
                           <button className="act-btn admin-filter-export" onClick={exportAdminCsv} type="button">Exportar CSV</button>
                         </div>
