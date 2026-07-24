@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { sortMatchesByDate, type Match, type MatchSelection, type Modalidad, type PickOption, type QuinielaData } from '../data'
+import { getTeamDisplayName } from '../config'
 import type { Jornada, JornadaStatus, PaymentStatus, PublicRankingEntry, PublicStats, QuinielaStatus, SavedQuiniela, Tournament, TournamentStatus } from '../types'
 import { getSupabase } from '../../utils/supabase'
 
@@ -82,8 +83,8 @@ function mapMatch(row: MatchRow): Match {
   return {
     id: row.id,
     jornadaId: row.jornada_id,
-    local: row.local,
-    visitante: row.visitante,
+    local: getTeamDisplayName(row.local),
+    visitante: getTeamDisplayName(row.visitante),
     time: row.time ?? '',
     timeClass: row.time_class ?? '',
     localImg: row.local_img ?? '',

@@ -112,7 +112,7 @@ const LIGA_MX_TEAM_DISPLAY_NAMES = [
   'Atlas',
   'Atlante',
   'Atletico de San Luis',
-  'CD Guadalajara',
+  'Chivas',
   'Correcaminos',
   'Cruz Azul',
   'Juárez',
@@ -133,6 +133,16 @@ const LIGA_MX_TEAM_DISPLAY_NAMES = [
 export const TEAM_LOGOS: Record<string, string> = {
   ...COUNTRY_LOGOS,
   ...CLUB_LOGOS,
+}
+
+export function getTeamDisplayName(teamName: string) {
+  const normalizedTeamName = teamName.trim().toLowerCase()
+
+  if (normalizedTeamName === 'cd guadalajara' || normalizedTeamName === 'guadalajara') {
+    return 'Chivas'
+  }
+
+  return teamName
 }
 
 export const LIGA_MX_TEAM_NAMES = LIGA_MX_TEAM_DISPLAY_NAMES
