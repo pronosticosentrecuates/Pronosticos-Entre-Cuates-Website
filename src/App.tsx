@@ -2868,7 +2868,7 @@ function App() {
                 </div>
 
                 <div className="matches-content">
-                  <div className="date-divider">Partidos de tu lista manual - logos de TheSportsDB</div>
+                  <div className="date-divider">Partidos de la Jornada - logos de TheSportsDB</div>
                   <div className="matches-wrap" id="matches-container">
                     {publicMatches.length === 0 ? (
                       <div className="combo-empty">No hay partidos disponibles para seleccionar en este momento.</div>
