@@ -808,13 +808,6 @@ body {
   border: 1px solid rgba(255, 214, 0, 0.3);
 }
 
-/* Variante de badge para DOM (día) */
-.time-badge.dom {
-  background: rgba(30, 136, 229, 0.15);
-  color: #64b5f6;
-  border-color: rgba(100, 181, 246, 0.3);
-}
-
 /* Sección inferior: inputs y resumen */
 .bottom-section {
   display: grid;
@@ -4252,12 +4245,7 @@ body {
   min-width: 0;
 }
 
-.mcr-time.dom {
-  color: var(--cyan);
-  background: rgba(0, 229, 255, 0.1);
-  border: 1px solid rgba(0, 229, 255, 0.2);
-}
-
+.mcr-time.dom,
 .mcr-time.sab {
   color: var(--yellow);
   background: rgba(255, 214, 0, 0.1);

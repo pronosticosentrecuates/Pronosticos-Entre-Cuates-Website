@@ -55,6 +55,23 @@ export function createEmptySelections(matches: Match[] = MATCHES): MatchSelectio
   return matches.map((match) => ({ partidoId: match.id, seleccion: [] }))
 }
 
+export function sortMatchesByDate(matches: Match[]): Match[] {
+  return [...matches].sort((a, b) => {
+    const aTimestamp = Date.parse(a.time)
+    const bTimestamp = Date.parse(b.time)
+    const aHasDate = Number.isFinite(aTimestamp)
+    const bHasDate = Number.isFinite(bTimestamp)
+
+    if (aHasDate && bHasDate) {
+      return aTimestamp - bTimestamp || a.id - b.id
+    }
+
+    if (aHasDate) return -1
+    if (bHasDate) return 1
+    return a.id - b.id
+  })
+}
+
 export function getMaxDobles(modalidad: Modalidad): number {
   return modalidad === '3 dobles' ? 3 : 5
 }

@@ -5,6 +5,7 @@ import {
   generateCombinations,
   getCosto,
   getMaxDobles,
+  sortMatchesByDate,
   toggleSelection,
   validateQuinielaCompleta,
   type Match,
@@ -78,5 +79,17 @@ describe('quiniela rules', () => {
 
     expect(blocked.blocked).toContain('máximo 2 selecciones')
     expect(blocked.selecciones[0].seleccion).toEqual(['L', 'E'])
+  })
+
+  it('orders matches from the earliest date to the latest', () => {
+    const datedMatches: Match[] = [
+      { ...matches[0], id: 1, time: '2026-07-26T21:00' },
+      { ...matches[1], id: 2, time: '2026-07-24T19:00' },
+      { ...matches[0], id: 3, time: '2026-07-25T18:00' },
+      { ...matches[1], id: 4, time: 'TBD' },
+    ]
+
+    expect(sortMatchesByDate(datedMatches).map((match) => match.id)).toEqual([2, 3, 1, 4])
+    expect(datedMatches.map((match) => match.id)).toEqual([1, 2, 3, 4])
   })
 })
