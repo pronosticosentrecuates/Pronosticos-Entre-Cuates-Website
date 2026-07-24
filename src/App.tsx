@@ -450,6 +450,7 @@ function App() {
     </div>
   )
   const [toast, setToast] = useState<ToastState>(null)
+  const [noticeModal, setNoticeModal] = useState<string | null>(null)
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null)
   const [adminDeleteConfirm, setAdminDeleteConfirm] = useState<AdminDeleteConfirm>(null)
   const [paymentModalQuiniela, setPaymentModalQuiniela] = useState<SavedQuiniela | null>(null)
@@ -1347,7 +1348,7 @@ function App() {
     }
 
     if (draftQuinielas.length === 0 || sending) {
-      window.alert('Agrega al menos una quiniela antes de enviar.')
+      setNoticeModal('Agrega al menos una quiniela antes de enviar.')
       return
     }
 
@@ -4494,6 +4495,20 @@ function App() {
           ) : null}
         </>
       )}
+
+      {noticeModal ? (
+        <div className="modal-overlay show" role="presentation">
+          <div aria-labelledby="notice-modal-title" aria-modal="true" className="modal-card" role="dialog">
+            <div className="modal-title" id="notice-modal-title">Aviso</div>
+            <div className="modal-body">{noticeModal}</div>
+            <div className="modal-actions">
+              <button autoFocus className="modal-btn confirm-accept" onClick={() => setNoticeModal(null)} type="button">
+                Aceptar
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {activeView !== 'admin' ? (
         <footer className="footer">
