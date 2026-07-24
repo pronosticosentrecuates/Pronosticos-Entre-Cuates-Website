@@ -142,6 +142,10 @@ export function getTeamDisplayName(teamName: string) {
     return 'Chivas'
   }
 
+  if (normalizedTeamName === 'correcaminos') {
+    return 'Correcaminos'
+  }
+
   return teamName
 }
 
