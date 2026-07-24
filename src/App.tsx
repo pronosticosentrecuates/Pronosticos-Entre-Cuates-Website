@@ -742,11 +742,16 @@ function App() {
         return matchesModal
       })
       .sort((a, b) => {
+        if (registroMaxPoints === 0) {
+          const newestFirst = new Date(b.quiniela.fechaRegistro).getTime() - new Date(a.quiniela.fechaRegistro).getTime()
+          return newestFirst || b.quiniela.id - a.quiniela.id
+        }
+
         const pointsOrder = rankingSortOrder === 'desc' ? b.puntos - a.puntos : a.puntos - b.puntos
         return pointsOrder || a.quiniela.nombre.localeCompare(b.quiniela.nombre) || a.quiniela.id - b.quiniela.id
       })
       .map(({ quiniela }) => quiniela)
-  }, [registroMatches, registroQuinielas, rankingModalFilter, rankingSortOrder])
+  }, [registroMatches, registroMaxPoints, registroQuinielas, rankingModalFilter, rankingSortOrder])
   const adminAcceptedTotal = quinielas.filter((quiniela) => quiniela.status === 'accepted').reduce((sum, quiniela) => sum + quiniela.costo, 0)
   const adminAcceptedTotalVisible = adminAcceptedTotal * 0.7
   const adminAcceptedCount = quinielas.filter((quiniela) => quiniela.status === 'accepted').length
@@ -3107,8 +3112,8 @@ function App() {
                   <option key={option} value={option}>{option}</option>
                 ))}
               </select>
-              <select className="filter-select" value={rankingSortOrder} onChange={(event) => setRankingSortOrder(event.target.value as 'desc' | 'asc')}>
-                <option value="desc">Mayor puntaje</option>
+              <select className="filter-select" disabled={registroMaxPoints === 0} value={rankingSortOrder} onChange={(event) => setRankingSortOrder(event.target.value as 'desc' | 'asc')}>
+                <option value="desc">{registroMaxPoints === 0 ? 'Más recientes primero' : 'Mayor puntaje'}</option>
                 <option value="asc">Menor puntaje</option>
               </select>
             </div>
