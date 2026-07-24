@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { sortMatchesByDate, type Match, type MatchSelection, type Modalidad, type PickOption, type QuinielaData } from '../data'
+import type { Match, MatchSelection, Modalidad, PickOption, QuinielaData } from '../data'
 import { getTeamDisplayName } from '../config'
 import type { Jornada, JornadaStatus, PaymentStatus, PublicRankingEntry, PublicStats, QuinielaStatus, SavedQuiniela, Tournament, TournamentStatus } from '../types'
 import { getSupabase } from '../../utils/supabase'
@@ -186,7 +186,7 @@ export async function loadPublicDashboard(jornadaId?: number): Promise<PublicDas
   } | null
   return {
     jornada: mapJornada(payload?.jornada),
-    matches: sortMatchesByDate((payload?.matches ?? []).map(mapMatch)),
+    matches: (payload?.matches ?? []).map(mapMatch),
     stats: {
       registered: Number(payload?.stats?.registered ?? 0),
       accepted: Number(payload?.stats?.accepted ?? 0),
@@ -243,7 +243,7 @@ export async function loadMatches(jornadaId?: number): Promise<Match[]> {
   if (jornadaId) query = query.eq('jornada_id', jornadaId)
   const { data, error } = await query
   if (error) throw error
-  return sortMatchesByDate(((data ?? []) as MatchRow[]).map(mapMatch))
+  return ((data ?? []) as MatchRow[]).map(mapMatch)
 }
 
 export async function loadJornadas(): Promise<Jornada[]> {
