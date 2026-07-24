@@ -44,6 +44,7 @@ import {
   updateQuinielaStatus,
 } from './services/quinielas'
 import type { Jornada, JornadaStatus, PaymentStatus, QuinielaStatus, SavedQuiniela, Tournament, TournamentStatus } from './types'
+import { hasValidPrivateLookupFactor, sanitizeCsvCell } from './security'
 import { getSupabase } from '../utils/supabase'
 
 type AppView = 'home' | 'registro' | 'admin'
@@ -185,7 +186,8 @@ function isValidPhone(value: string) {
 }
 
 function isValidName(value: string) {
-  return value.trim().length >= 2
+  const normalized = value.trim()
+  return normalized.length >= 2 && normalized.length <= 100 && !/\p{Cc}/u.test(normalized)
 }
 
 function formatSelection(selection: MatchSelection) {
@@ -226,14 +228,12 @@ function TeamLogo({ teamName, fallback, className }: { teamName: string; fallbac
       alt=""
       aria-hidden="true"
       className={className}
+      loading="lazy"
       onError={() => setFailed(true)}
+      referrerPolicy="no-referrer"
       src={logoSource}
     />
   )
-}
-
-function formatSelectionRow(selecciones: MatchSelection[]) {
-  return selecciones.map((selection) => selection.seleccion.join('') || '—').join(' | ')
 }
 
 function getMatchOutcome(localScore: number | null, visitanteScore: number | null): PickOption | null {
@@ -1059,7 +1059,7 @@ function App() {
       setActiveView('admin')
       setAdminTab('quinielas')
       await refreshQuinielas()
-      // WhatsApp will open in the current tab after the quinielas are registered.
+      return
     } catch (error) {
       console.error(error)
     }
@@ -1353,20 +1353,7 @@ function App() {
     }
 
     let message = `QUINIELA ${APP_CONFIG.edition.toUpperCase()}\n\n`
-
-    draftQuinielas.forEach((quiniela, index) => {
-      message += `${index + 1}. ${quiniela.nombre}${quiniela.celular ? ` (${quiniela.celular})` : ''}\n`
-      message += `Modalidad: ${quiniela.modalidad} | Dobles: ${quiniela.doblesUsados} | Combinaciones: ${quiniela.combinaciones.length}\n`
-      message += `Resultados: ${formatSelectionRow(quiniela.selecciones)}\n`
-      message += quiniela.selecciones
-        .map((selection) => {
-          const match = matches.find((item) => item.id === selection.partidoId)
-          return `${match?.local ?? 'Partido'} vs ${match?.visitante ?? 'Partido'}: ${formatSelection(selection)}`
-        })
-        .join('\n')
-      message += `\nCosto: $${quiniela.costo}\n\n`
-    })
-
+    message += `Registros enviados: ${draftQuinielas.length}\n`
     message += `TOTAL: $${totalGuardado.toFixed(2)}`
 
     const whatsappWindow = window.open('', '_blank')
@@ -1394,7 +1381,7 @@ function App() {
         registeredFolios.push(await registerQuiniela(quiniela, 'pending'))
       }
 
-      message += `\nFOLIOS: ${registeredFolios.join(', ')}\nConsulta cada quiniela con su folio, celular completo y nombre registrado.`
+      message += `\nFOLIOS: ${registeredFolios.join(', ')}\nLos datos completos quedaron protegidos en el panel administrativo.`
       await refreshQuinielas()
       window.localStorage.setItem(QUINIELAS_REFRESH_STORAGE_KEY, JSON.stringify(registeredFolios))
       setDraftQuinielas([])
@@ -1420,11 +1407,8 @@ function App() {
     setLookupResults([])
     setLookupHasSearched(false)
     const cleanLookupPhone = normalizePhone(lookupPhone)
-    const hasLookupFolio = lookupFolio.trim().length > 0
-    const hasLookupPhone = cleanLookupPhone.length === 10
-    const hasLookupName = lookupName.trim().length >= 2
-    if (!hasLookupFolio && !hasLookupPhone && !hasLookupName) {
-      setLookupMessage('Ingresa al menos un dato: folio, celular completo de 10 digitos o nombre registrado.')
+    if (!hasValidPrivateLookupFactor(lookupFolio, cleanLookupPhone, lookupName)) {
+      setLookupMessage('Ingresa al menos un dato valido: folio, celular completo de 10 digitos o nombre registrado.')
       return
     }
     setLookupHasSearched(true)
@@ -1923,6 +1907,24 @@ function App() {
       return
     }
 
+    pdfWindow.opener = null
+    const printWhenReady = () => {
+      const images = Array.from(pdfWindow.document.images)
+      const pendingImages = images.filter((image) => !image.complete)
+      const print = () => pdfWindow.requestAnimationFrame(() => pdfWindow.print())
+
+      if (pendingImages.length === 0) {
+        print()
+        return
+      }
+
+      void Promise.allSettled(pendingImages.map((image) => new Promise((resolve) => {
+        image.addEventListener('load', resolve, { once: true })
+        image.addEventListener('error', resolve, { once: true })
+      }))).then(print)
+    }
+    pdfWindow.addEventListener('load', printWhenReady, { once: true })
+
     pdfWindow.document.write(`
       <!doctype html>
       <html lang="es">
@@ -2214,24 +2216,6 @@ function App() {
               <div class="pdf-footer">Pronosticos Entre Cuates</div>
             </div>
           </div>
-          <script>
-            const printWhenReady = () => {
-              const images = Array.from(document.images);
-              const pendingImages = images.filter((image) => !image.complete);
-              const print = () => {
-                requestAnimationFrame(() => window.print());
-              };
-              if (pendingImages.length === 0) {
-                print();
-                return;
-              }
-              Promise.allSettled(pendingImages.map((image) => new Promise((resolve) => {
-                image.addEventListener('load', resolve, { once: true });
-                image.addEventListener('error', resolve, { once: true });
-              }))).then(print);
-            };
-            window.addEventListener('load', printWhenReady);
-          </script>
         </body>
       </html>
     `)
@@ -2414,7 +2398,7 @@ function App() {
       ['Folio', 'Nombre', 'Celular', 'Modalidad', 'Costo', 'Estatus', 'Pago', 'Referencia', 'Premio', 'Fecha'],
       ...filteredAdminQuinielas.map((q) => [q.folio ?? q.id, q.nombre, q.celular, q.modalidad, q.costo, q.status, q.paymentStatus ?? 'pending', q.paymentReference ?? '', q.prizeAmount ?? 0, q.fechaRegistro]),
     ]
-    const csv = rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const csv = rows.map((row) => row.map(sanitizeCsvCell).join(',')).join('\n')
     const link = document.createElement('a')
     link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
     link.download = `quinielas-${jornada?.nombre ?? 'jornada'}.csv`
@@ -2953,13 +2937,14 @@ function App() {
 
                 <div className="input-block">
                   <div className="input-label">Tu Nombre</div>
-                  <input className="input-field" disabled={!registrosAbiertos} id="input-name" placeholder="Ingresa tu nombre completo" value={nombre} onChange={(event) => setNombre(event.target.value)} />
+                  <input autoComplete="name" className="input-field" disabled={!registrosAbiertos} id="input-name" maxLength={100} placeholder="Ingresa tu nombre completo" value={nombre} onChange={(event) => setNombre(event.target.value)} />
                 </div>
 
                 <div className="input-block">
                   <div className="input-label">Celular</div>
                   <input
                     className="input-field"
+                    autoComplete="tel"
                     disabled={!registrosAbiertos}
                     id="input-phone"
                     inputMode="numeric"
@@ -3063,9 +3048,9 @@ function App() {
             <h1>Registro al momento/Verificador</h1>
             <p>Verifica tu quiniela, revisa las capturas aprobadas y consulta los resultados de la jornada en un solo lugar.</p>
             <div className="lookup-form">
-              <input className="input-field" placeholder="Folio, por ejemplo Q1-000001" value={lookupFolio} onChange={(event) => { setLookupFolio(event.target.value); clearLookupState() }} />
-              <input className="input-field" inputMode="tel" maxLength={10} placeholder="Celular completo" value={lookupPhone} onChange={(event) => { setLookupPhone(normalizePhone(event.target.value)); clearLookupState() }} />
-              <input className="input-field" placeholder="Nombre registrado" value={lookupName} onChange={(event) => { setLookupName(event.target.value); clearLookupState() }} />
+              <input autoComplete="off" className="input-field" maxLength={40} placeholder="Folio, por ejemplo Q1-000001" value={lookupFolio} onChange={(event) => { setLookupFolio(event.target.value); clearLookupState() }} />
+              <input autoComplete="tel" className="input-field" inputMode="tel" maxLength={10} placeholder="Celular completo" value={lookupPhone} onChange={(event) => { setLookupPhone(normalizePhone(event.target.value)); clearLookupState() }} />
+              <input autoComplete="name" className="input-field" maxLength={100} placeholder="Nombre registrado" value={lookupName} onChange={(event) => { setLookupName(event.target.value); clearLookupState() }} />
               <button className="registro-back" onClick={handleLookup} type="button">Consultar</button>
             </div>
             {lookupMessage ? <div className="app-notice error">{lookupMessage}</div> : null}
@@ -3832,12 +3817,13 @@ function App() {
 
                 <div className="login-field">
                   <label htmlFor="login-email">📧 Correo electrónico</label>
-                  <input id="login-email" className="login-input" placeholder="admin@rrad.com" type="email" value={adminLoginEmail} onChange={(event) => setAdminLoginEmail(event.target.value)} />
+                  <input id="login-email" autoComplete="username" className="login-input" maxLength={254} placeholder="admin@rrad.com" type="email" value={adminLoginEmail} onChange={(event) => setAdminLoginEmail(event.target.value)} />
                 </div>
                 <div className="login-field">
                   <label htmlFor="login-pass">🔑 Contraseña</label>
                   <input
                     id="login-pass"
+                    autoComplete="current-password"
                     className="login-input"
                     placeholder="••••••••"
                     type="password"
@@ -3872,15 +3858,15 @@ function App() {
                   <div className="modal-form-grid">
                     <label className="jornada-field">
                       <span>Nombre del torneo</span>
-                      <input className="rp-input" placeholder="Apertura 2026" value={newTournamentName} onChange={(event) => setNewTournamentName(event.target.value)} />
+                      <input className="rp-input" maxLength={100} placeholder="Apertura 2026" value={newTournamentName} onChange={(event) => setNewTournamentName(event.target.value)} />
                     </label>
                     <label className="jornada-field">
                       <span>Liga</span>
-                      <input className="rp-input" placeholder="Liga MX" value={newTournamentLeague} onChange={(event) => setNewTournamentLeague(event.target.value)} />
+                      <input className="rp-input" maxLength={100} placeholder="Liga MX" value={newTournamentLeague} onChange={(event) => setNewTournamentLeague(event.target.value)} />
                     </label>
                     <label className="jornada-field">
                       <span>Temporada</span>
-                      <input className="rp-input" placeholder="2026-2027" value={newTournamentSeason} onChange={(event) => setNewTournamentSeason(event.target.value)} />
+                      <input className="rp-input" maxLength={40} placeholder="2026-2027" value={newTournamentSeason} onChange={(event) => setNewTournamentSeason(event.target.value)} />
                     </label>
                   </div>
                   <div className="admin-quiniela-actions">
@@ -3906,15 +3892,15 @@ function App() {
                   <div className="modal-form-grid">
                     <label className="jornada-field">
                       <span>Nombre del torneo</span>
-                      <input className="rp-input" placeholder="Apertura 2026" value={editTournamentName} onChange={(event) => setEditTournamentName(event.target.value)} />
+                      <input className="rp-input" maxLength={100} placeholder="Apertura 2026" value={editTournamentName} onChange={(event) => setEditTournamentName(event.target.value)} />
                     </label>
                     <label className="jornada-field">
                       <span>Liga</span>
-                      <input className="rp-input" placeholder="Liga MX" value={editTournamentLeague} onChange={(event) => setEditTournamentLeague(event.target.value)} />
+                      <input className="rp-input" maxLength={100} placeholder="Liga MX" value={editTournamentLeague} onChange={(event) => setEditTournamentLeague(event.target.value)} />
                     </label>
                     <label className="jornada-field">
                       <span>Temporada</span>
-                      <input className="rp-input" placeholder="2026-2027" value={editTournamentSeason} onChange={(event) => setEditTournamentSeason(event.target.value)} />
+                      <input className="rp-input" maxLength={40} placeholder="2026-2027" value={editTournamentSeason} onChange={(event) => setEditTournamentSeason(event.target.value)} />
                     </label>
                     <label className="jornada-field">
                       <span>Estado</span>
@@ -3961,7 +3947,7 @@ function App() {
                     </label>
                     <label className="jornada-field">
                       <span>Nombre</span>
-                      <input className="rp-input" placeholder="Nombre de la jornada" value={newJornadaName} onChange={(event) => setNewJornadaName(event.target.value)} />
+                      <input className="rp-input" maxLength={100} placeholder="Nombre de la jornada" value={newJornadaName} onChange={(event) => setNewJornadaName(event.target.value)} />
                     </label>
                     <label className="jornada-field">
                       <span>Apertura</span>
@@ -4016,7 +4002,7 @@ function App() {
                     </label>
                     <label className="jornada-field">
                       <span>Nombre</span>
-                      <input className="rp-input" placeholder="Nombre de la jornada" value={editJornadaName} onChange={(event) => setEditJornadaName(event.target.value)} />
+                      <input className="rp-input" maxLength={100} placeholder="Nombre de la jornada" value={editJornadaName} onChange={(event) => setEditJornadaName(event.target.value)} />
                     </label>
                     <label className="jornada-field">
                       <span>Apertura</span>
@@ -4036,7 +4022,7 @@ function App() {
                     </label>
                     <label className="jornada-field jornada-notes-input">
                       <span>Notas</span>
-                      <textarea className="rp-input" placeholder="Notas" value={editJornadaNotes} onChange={(event) => setEditJornadaNotes(event.target.value)} />
+                      <textarea className="rp-input" maxLength={1000} placeholder="Notas" value={editJornadaNotes} onChange={(event) => setEditJornadaNotes(event.target.value)} />
                     </label>
                     <div className="jornada-match-preview">
                       <div className="jornada-match-preview-title">Partidos en esta jornada</div>
@@ -4272,7 +4258,7 @@ function App() {
                   <div className="admin-quiniela-grid">
                     <div className="admin-quiniela-field">
                       <label>Nombre</label>
-                      <input className="rp-input" placeholder="Nombre completo" value={adminQuinielaNombre} onChange={(event) => setAdminQuinielaNombre(event.target.value)} />
+                      <input autoComplete="name" className="rp-input" maxLength={100} placeholder="Nombre completo" value={adminQuinielaNombre} onChange={(event) => setAdminQuinielaNombre(event.target.value)} />
                     </div>
                     <div className="admin-quiniela-field">
                       <label>Celular</label>
@@ -4378,6 +4364,7 @@ function App() {
                       <input
                         className="rp-input"
                         autoFocus
+                        maxLength={200}
                         placeholder="Referencia de pago"
                         value={paymentReferenceInput}
                         onChange={(event) => setPaymentReferenceInput(event.target.value)}

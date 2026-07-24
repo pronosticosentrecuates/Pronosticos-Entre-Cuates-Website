@@ -215,26 +215,8 @@ export async function lookupQuiniela(folio: string, phone: string, nombre: strin
 export async function loadApprovedQuinielas(jornadaId?: number): Promise<SavedQuiniela[]> {
   const supabase = requireSupabase()
   const { data, error } = await supabase.rpc('get_public_approved_quinielas', { p_jornada_id: jornadaId ?? null })
-
-  if (!error) {
-    return ((data ?? []) as QuinielaRow[]).map(mapQuiniela)
-  }
-
-  if (error.code !== 'PGRST202') {
-    throw error
-  }
-
-  let query = supabase
-    .from('quinielas')
-    .select('*, selections(partido_id, seleccion), combinations(combination)')
-    .eq('status', 'accepted')
-    .order('id', { ascending: true })
-
-  if (jornadaId) query = query.eq('jornada_id', jornadaId)
-
-  const { data: rows, error: fallbackError } = await query
-  if (fallbackError) throw fallbackError
-  return ((rows ?? []) as QuinielaRow[]).map(mapQuiniela)
+  if (error) throw error
+  return ((data ?? []) as QuinielaRow[]).map(mapQuiniela)
 }
 
 export async function loadMatches(jornadaId?: number): Promise<Match[]> {
