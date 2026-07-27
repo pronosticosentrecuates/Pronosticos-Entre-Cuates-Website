@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  applyMatchOrder,
   countDobles,
   createEmptySelections,
   generateCombinations,
@@ -78,6 +79,19 @@ describe('quiniela rules', () => {
 
     expect(blocked.blocked).toContain('máximo 2 selecciones')
     expect(blocked.selecciones[0].seleccion).toEqual(['L', 'E'])
+  })
+
+  it('reorders only the matches from the selected jornada', () => {
+    const jornadaMatches: Match[] = [
+      { ...matches[0], jornadaId: 10, sortOrder: 1 },
+      { ...matches[1], jornadaId: 10, sortOrder: 2 },
+      { id: 3, jornadaId: 20, sortOrder: 1, local: 'E', visitante: 'F', time: '', timeClass: '', localImg: '', visitanteImg: '' },
+    ]
+
+    const reordered = applyMatchOrder(jornadaMatches, 10, [2, 1])
+
+    expect(reordered.map((match) => match.id)).toEqual([2, 1, 3])
+    expect(reordered.map((match) => match.sortOrder)).toEqual([1, 2, 1])
   })
 
 })

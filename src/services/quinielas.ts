@@ -7,6 +7,7 @@ import { getSupabase } from '../../utils/supabase'
 type MatchRow = {
   id: number
   jornada_id?: number
+  sort_order?: number | null
   local: string
   visitante: string
   time: string | null
@@ -79,10 +80,18 @@ function requireSupabase(): SupabaseClient {
   return supabase
 }
 
+function isMissingSortOrderColumn(error: { code?: string; message?: string } | null): boolean {
+  return Boolean(
+    error
+    && (error.code === '42703' || error.message?.toLowerCase().includes('sort_order')),
+  )
+}
+
 function mapMatch(row: MatchRow): Match {
   return {
     id: row.id,
     jornadaId: row.jornada_id,
+    sortOrder: row.sort_order === undefined ? undefined : Number(row.sort_order ?? row.id),
     local: getTeamDisplayName(row.local),
     visitante: getTeamDisplayName(row.visitante),
     time: row.time ?? '',
@@ -225,7 +234,13 @@ export async function loadMatches(jornadaId?: number): Promise<Match[]> {
   if (jornadaId) query = query.eq('jornada_id', jornadaId)
   const { data, error } = await query
   if (error) throw error
-  return ((data ?? []) as MatchRow[]).map(mapMatch)
+  return ((data ?? []) as MatchRow[])
+    .map(mapMatch)
+    .sort((first, second) => (
+      Number(second.jornadaId ?? 0) - Number(first.jornadaId ?? 0)
+      || Number(first.sortOrder ?? first.id) - Number(second.sortOrder ?? second.id)
+      || first.id - second.id
+    ))
 }
 
 export async function loadJornadas(): Promise<Jornada[]> {
@@ -465,14 +480,28 @@ export async function insertMatch(match: Omit<Match, 'id'>, jornadaId: number): 
     .maybeSingle()
   if (lastMatchError) throw lastMatchError
 
+  const { data: lastJornadaMatch, error: lastJornadaMatchError } = await supabase
+    .from('matches')
+    .select('sort_order')
+    .eq('jornada_id', jornadaId)
+    .order('sort_order', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (lastJornadaMatchError && !isMissingSortOrderColumn(lastJornadaMatchError)) {
+    throw lastJornadaMatchError
+  }
+
   const id = Number(lastMatch?.id ?? 0) + 1
-  const { error } = await supabase.from('matches').insert({
+  const sortOrder = lastJornadaMatchError ? undefined : Number(lastJornadaMatch?.sort_order ?? 0) + 1
+  const payload: Record<string, unknown> = {
     id, jornada_id: jornadaId, local: match.local, visitante: match.visitante, time: match.time,
     time_class: match.timeClass, local_img: match.localImg, visitante_img: match.visitanteImg,
     local_score: match.localScore, visitante_score: match.visitanteScore,
-  })
+  }
+  if (sortOrder !== undefined) payload.sort_order = sortOrder
+  const { error } = await supabase.from('matches').insert(payload)
   if (error) throw error
-  return { ...match, id, jornadaId }
+  return { ...match, id, jornadaId, sortOrder }
 }
 
 export async function updateMatch(match: Match) {
@@ -481,8 +510,46 @@ export async function updateMatch(match: Match) {
     local: match.local, visitante: match.visitante, time: match.time, time_class: match.timeClass,
     local_img: match.localImg, visitante_img: match.visitanteImg, local_score: match.localScore, visitante_score: match.visitanteScore,
   }
-  if (match.jornadaId !== undefined) payload.jornada_id = match.jornadaId
+  if (match.jornadaId !== undefined) {
+    const { data: currentMatch, error: currentMatchError } = await supabase
+      .from('matches')
+      .select('jornada_id')
+      .eq('id', match.id)
+      .single()
+    if (currentMatchError) throw currentMatchError
+
+    payload.jornada_id = match.jornadaId
+    if (currentMatch.jornada_id !== match.jornadaId) {
+      const { data: lastJornadaMatch, error: lastJornadaMatchError } = await supabase
+        .from('matches')
+        .select('sort_order')
+        .eq('jornada_id', match.jornadaId)
+        .order('sort_order', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (lastJornadaMatchError && !isMissingSortOrderColumn(lastJornadaMatchError)) {
+        throw lastJornadaMatchError
+      }
+      if (!lastJornadaMatchError) {
+        payload.sort_order = Number(lastJornadaMatch?.sort_order ?? 0) + 1
+      }
+    } else if (match.sortOrder !== undefined) {
+      payload.sort_order = match.sortOrder
+    }
+  }
   const { error } = await supabase.from('matches').update(payload).eq('id', match.id)
+  if (error) throw error
+}
+
+export async function reorderMatches(jornadaId: number, orderedMatchIds: number[]) {
+  const supabase = requireSupabase()
+  const { error } = await supabase.rpc('reorder_matches', {
+    p_jornada_id: jornadaId,
+    p_match_ids: orderedMatchIds,
+  })
+  if (error?.code === 'PGRST202') {
+    throw new Error('Falta instalar la migracion para ordenar partidos en Supabase.')
+  }
   if (error) throw error
 }
 

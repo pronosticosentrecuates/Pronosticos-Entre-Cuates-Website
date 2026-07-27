@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from 'react'
 import {
+  applyMatchOrder,
   countDobles,
   createEmptySelections,
   generateCombinations,
@@ -33,6 +34,7 @@ import {
   loadTournaments,
   lookupQuiniela,
   registerQuiniela,
+  reorderMatches,
   signInAdmin,
   signOutAdmin,
   updateJornada,
@@ -361,6 +363,7 @@ function App() {
   const [adminLoginPassword, setAdminLoginPassword] = useState('')
   const [adminLoginError, setAdminLoginError] = useState('')
   const [adminTab, setAdminTab] = useState<AdminTab>('quinielas')
+  const [adminJornadaFilter, setAdminJornadaFilter] = useState('current')
   const [adminSearch, setAdminSearch] = useState('')
   const [adminStatusFilter, setAdminStatusFilter] = useState<'all' | QuinielaStatus>('all')
   const [adminModalFilter, setAdminModalFilter] = useState<'all' | Modalidad>('all')
@@ -414,6 +417,9 @@ function App() {
   const [savingLigaMxMatches, setSavingLigaMxMatches] = useState(false)
   const [ligaMxImportMessage, setLigaMxImportMessage] = useState('')
   const [matchJornadaFilter, setMatchJornadaFilter] = useState('all')
+  const [reorderingMatchId, setReorderingMatchId] = useState<number | null>(null)
+  const [draggingMatchId, setDraggingMatchId] = useState<number | null>(null)
+  const [dragOverMatchId, setDragOverMatchId] = useState<number | null>(null)
   const [editingMatchId, setEditingMatchId] = useState<number | null>(null)
   const [editLocal, setEditLocal] = useState('')
   const [editVisitante, setEditVisitante] = useState('')
@@ -458,6 +464,10 @@ function App() {
   const [prizeModalQuiniela, setPrizeModalQuiniela] = useState<SavedQuiniela | null>(null)
   const [prizeAmountInput, setPrizeAmountInput] = useState('')
   const nextId = useRef(1)
+  const draggingMatchIdRef = useRef<number | null>(null)
+  const draggingJornadaIdRef = useRef<number | null>(null)
+  const dragOriginalOrderRef = useRef<number[]>([])
+  const dragCurrentOrderRef = useRef<number[]>([])
   const isJornadaOpenBySchedule = useCallback((item: Jornada | null | undefined) => {
     if (!item) return false
     const closedByDate = item.closeAt !== null && now >= new Date(item.closeAt).getTime()
@@ -468,9 +478,29 @@ function App() {
   const defaultTournament = activeTournaments[0] ?? tournaments[0] ?? null
   const openJornadas = useMemo(() => jornadas.filter((item) => item.status === 'open' || item.status === 'draft'), [jornadas])
   const adminMatchSource = adminMatches
+  const matchOrderingAvailable = adminMatches.length === 0 || adminMatches.every((match) => match.sortOrder !== undefined)
   const filteredAdminMatches = matchJornadaFilter === 'all'
     ? adminMatchSource
     : adminMatchSource.filter((match) => String(match.jornadaId ?? '') === matchJornadaFilter)
+  const matchOrderMeta = useMemo(() => {
+    const matchesByJornada = new Map<number, Match[]>()
+
+    for (const match of adminMatches) {
+      if (!match.jornadaId) continue
+      const jornadaMatches = matchesByJornada.get(match.jornadaId) ?? []
+      jornadaMatches.push(match)
+      matchesByJornada.set(match.jornadaId, jornadaMatches)
+    }
+
+    const positions = new Map<number, { index: number; count: number }>()
+    for (const jornadaMatches of matchesByJornada.values()) {
+      jornadaMatches.forEach((match, index) => {
+        positions.set(match.id, { index, count: jornadaMatches.length })
+      })
+    }
+
+    return positions
+  }, [adminMatches])
   const getJornadaMatches = (jornadaId: number) => {
     return adminMatchSource.filter((match) => match.jornadaId === jornadaId || (!match.jornadaId && jornada?.id === jornadaId))
   }
@@ -754,10 +784,29 @@ function App() {
       })
       .map(({ quiniela }) => quiniela)
   }, [registroMatches, registroMaxPoints, registroQuinielas, rankingModalFilter, rankingSortOrder])
-  const adminAcceptedTotal = quinielas.filter((quiniela) => quiniela.status === 'accepted').reduce((sum, quiniela) => sum + quiniela.costo, 0)
+  const adminActiveJornada = jornadas.find((item) => item.status === 'open')
+    ?? jornadas.find((item) => item.status === 'draft')
+    ?? jornada
+    ?? jornadas[0]
+    ?? null
+  const adminSelectedJornadaId = adminJornadaFilter === 'all'
+    ? null
+    : adminJornadaFilter === 'current'
+      ? adminActiveJornada?.id ?? null
+      : Number(adminJornadaFilter) || null
+  const adminSelectedJornada = adminSelectedJornadaId
+    ? jornadas.find((item) => item.id === adminSelectedJornadaId)
+      ?? (jornada?.id === adminSelectedJornadaId ? jornada : null)
+    : null
+  const adminJornadaQuinielas = adminJornadaFilter === 'all'
+    ? quinielas
+    : adminSelectedJornadaId
+      ? quinielas.filter((quiniela) => quiniela.jornadaId === adminSelectedJornadaId)
+      : []
+  const adminAcceptedTotal = adminJornadaQuinielas.filter((quiniela) => quiniela.status === 'accepted').reduce((sum, quiniela) => sum + quiniela.costo, 0)
   const adminAcceptedTotalVisible = adminAcceptedTotal * 0.7
-  const adminAcceptedCount = quinielas.filter((quiniela) => quiniela.status === 'accepted').length
-  const adminPendingCount = quinielas.filter((quiniela) => quiniela.status === 'pending').length
+  const adminAcceptedCount = adminJornadaQuinielas.filter((quiniela) => quiniela.status === 'accepted').length
+  const adminPendingCount = adminJornadaQuinielas.filter((quiniela) => quiniela.status === 'pending').length
   const adminQuinielaCosto = getCosto(adminQuinielaModalidad)
   const adminQuinielaMaxDobles = getMaxDobles(adminQuinielaModalidad)
   const adminQuinielaTargetJornadaId = adminQuinielaJornadaId ?? (isJornadaOpenBySchedule(jornada) ? jornada?.id ?? null : null)
@@ -771,7 +820,7 @@ function App() {
   const adminQuinielaCompleta = adminQuinielaMatches.length > 0 && validateQuinielaCompleta(adminVisibleQuinielaSelections, adminQuinielaMatches)
   const adminQuinielaNombreValido = isValidName(adminQuinielaNombre)
   const adminQuinielaCelularValido = isValidPhone(adminQuinielaCelular)
-  const filteredAdminQuinielas = quinielas
+  const filteredAdminQuinielas = adminJornadaQuinielas
     .filter((quiniela) => {
       const q = adminSearch.toLowerCase()
       const matchSearch = !q || quiniela.nombre.toLowerCase().includes(q) || quiniela.celular.includes(q)
@@ -1076,6 +1125,7 @@ function App() {
     setAdminLoginError('')
     setActiveView('home')
     setAdminTab('quinielas')
+    setAdminJornadaFilter('current')
     setNavOpen(false)
   }
 
@@ -2401,7 +2451,10 @@ function App() {
     const csv = rows.map((row) => row.map(sanitizeCsvCell).join(',')).join('\n')
     const link = document.createElement('a')
     link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
-    link.download = `quinielas-${jornada?.nombre ?? 'jornada'}.csv`
+    const jornadaFileName = adminJornadaFilter === 'all'
+      ? 'historial-completo'
+      : adminSelectedJornada?.nombre ?? 'jornada-activa'
+    link.download = `quinielas-${jornadaFileName}.csv`
     link.click()
     URL.revokeObjectURL(link.href)
   }
@@ -2728,6 +2781,149 @@ function App() {
       console.error(err)
       setToast({ message: 'No se pudo actualizar el partido en la base de datos.', kind: 'error' })
     }
+  }
+
+  const persistMatchOrder = async (
+    jornadaId: number,
+    originalOrder: number[],
+    nextOrder: number[],
+    movedMatchId: number,
+    applyOptimistically = true,
+  ) => {
+    setReorderingMatchId(movedMatchId)
+    if (applyOptimistically) {
+      setAdminMatches((current) => applyMatchOrder(current, jornadaId, nextOrder))
+      setMatches((current) => applyMatchOrder(current, jornadaId, nextOrder))
+    }
+    try {
+      await reorderMatches(jornadaId, nextOrder)
+      await refreshQuinielas()
+      setToast({ message: 'Orden de partidos actualizado.', kind: 'success' })
+    } catch (error) {
+      setAdminMatches((current) => applyMatchOrder(current, jornadaId, originalOrder))
+      setMatches((current) => applyMatchOrder(current, jornadaId, originalOrder))
+      console.error(error)
+      setToast({
+        message: error instanceof Error ? error.message : 'No se pudo cambiar el orden de los partidos.',
+        kind: 'error',
+      })
+    } finally {
+      setReorderingMatchId(null)
+    }
+  }
+
+  const moveMatch = (match: Match, direction: -1 | 1) => {
+    if (!matchOrderingAvailable || !match.jornadaId || reorderingMatchId !== null || draggingMatchId !== null) return
+
+    const jornadaMatches = adminMatchSource.filter((item) => item.jornadaId === match.jornadaId)
+    const currentIndex = jornadaMatches.findIndex((item) => item.id === match.id)
+    const targetIndex = currentIndex + direction
+
+    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= jornadaMatches.length) return
+
+    const originalOrder = jornadaMatches.map((item) => item.id)
+    const nextOrder = [...originalOrder]
+    ;[nextOrder[currentIndex], nextOrder[targetIndex]] = [nextOrder[targetIndex], nextOrder[currentIndex]]
+    void persistMatchOrder(match.jornadaId, originalOrder, nextOrder, match.id)
+  }
+
+  const resetMatchDrag = () => {
+    draggingMatchIdRef.current = null
+    draggingJornadaIdRef.current = null
+    dragOriginalOrderRef.current = []
+    dragCurrentOrderRef.current = []
+    setDraggingMatchId(null)
+    setDragOverMatchId(null)
+  }
+
+  const startMatchDrag = (event: ReactPointerEvent<HTMLButtonElement>, match: Match) => {
+    if (
+      !match.jornadaId
+      || !matchOrderingAvailable
+      || reorderingMatchId !== null
+      || draggingMatchIdRef.current !== null
+      || editingMatchId === match.id
+      || (event.pointerType === 'mouse' && event.button !== 0)
+    ) {
+      return
+    }
+
+    const jornadaMatches = adminMatchSource.filter((item) => item.jornadaId === match.jornadaId)
+    if (jornadaMatches.length < 2) return
+
+    event.preventDefault()
+    event.currentTarget.setPointerCapture(event.pointerId)
+    const currentOrder = jornadaMatches.map((item) => item.id)
+    draggingMatchIdRef.current = match.id
+    draggingJornadaIdRef.current = match.jornadaId
+    dragOriginalOrderRef.current = currentOrder
+    dragCurrentOrderRef.current = currentOrder
+    setDraggingMatchId(match.id)
+    setDragOverMatchId(match.id)
+  }
+
+  const updateMatchDrag = (event: ReactPointerEvent<HTMLButtonElement>, match: Match) => {
+    if (draggingMatchIdRef.current !== match.id || draggingJornadaIdRef.current === null) return
+
+    event.preventDefault()
+    const targetRow = document
+      .elementFromPoint(event.clientX, event.clientY)
+      ?.closest<HTMLElement>('.match-create-row[data-match-id]')
+    const targetMatchId = Number(targetRow?.dataset.matchId)
+    const currentOrder = dragCurrentOrderRef.current
+    const currentIndex = currentOrder.indexOf(match.id)
+    const targetIndex = currentOrder.indexOf(targetMatchId)
+
+    if (currentIndex < 0 || targetIndex < 0) return
+
+    setDragOverMatchId(targetMatchId)
+    if (currentIndex === targetIndex) return
+
+    const nextOrder = [...currentOrder]
+    nextOrder.splice(currentIndex, 1)
+    nextOrder.splice(targetIndex, 0, match.id)
+    dragCurrentOrderRef.current = nextOrder
+    const jornadaId = draggingJornadaIdRef.current
+    setAdminMatches((current) => applyMatchOrder(current, jornadaId, nextOrder))
+    setMatches((current) => applyMatchOrder(current, jornadaId, nextOrder))
+  }
+
+  const finishMatchDrag = (event: ReactPointerEvent<HTMLButtonElement>, match: Match) => {
+    if (draggingMatchIdRef.current !== match.id || draggingJornadaIdRef.current === null) return
+
+    event.preventDefault()
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+
+    const jornadaId = draggingJornadaIdRef.current
+    const originalOrder = dragOriginalOrderRef.current
+    const nextOrder = dragCurrentOrderRef.current
+    const orderChanged = originalOrder.some((id, index) => id !== nextOrder[index])
+    resetMatchDrag()
+
+    if (orderChanged) {
+      void persistMatchOrder(jornadaId, originalOrder, nextOrder, match.id, false)
+    }
+  }
+
+  const cancelMatchDrag = (event: ReactPointerEvent<HTMLButtonElement>, match: Match) => {
+    if (draggingMatchIdRef.current !== match.id || draggingJornadaIdRef.current === null) return
+
+    const jornadaId = draggingJornadaIdRef.current
+    const originalOrder = dragOriginalOrderRef.current
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+    setAdminMatches((current) => applyMatchOrder(current, jornadaId, originalOrder))
+    setMatches((current) => applyMatchOrder(current, jornadaId, originalOrder))
+    resetMatchDrag()
+  }
+
+  const handleMatchDragKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>, match: Match) => {
+    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return
+    event.preventDefault()
+    moveMatch(match, event.key === 'ArrowUp' ? -1 : 1)
   }
 
   const deleteMatch = async (id: number) => {
@@ -3151,7 +3347,7 @@ function App() {
                     <div className="stat-icon">📋</div>
                     <div>
                       <div className="stat-label">Total registradas</div>
-                      <div className="stat-val cyan">{quinielas.length}</div>
+                      <div className="stat-val cyan">{adminJornadaQuinielas.length}</div>
                     </div>
                   </div>
                   <div className="stat-card">
@@ -3190,6 +3386,22 @@ function App() {
                       </div>
                       <div className="section-body">
                         <div className="filter-bar">
+                          <select
+                            className="filter-select admin-jornada-filter"
+                            aria-label="Filtrar quinielas por jornada"
+                            value={adminJornadaFilter}
+                            onChange={(event) => setAdminJornadaFilter(event.target.value)}
+                          >
+                            <option value="current">
+                              Jornada activa · {adminActiveJornada?.nombre ?? 'Sin jornada activa'}
+                            </option>
+                            {jornadas.filter((item) => item.id !== adminActiveJornada?.id).map((item) => (
+                              <option key={item.id} value={item.id}>
+                                {item.nombre}
+                              </option>
+                            ))}
+                            <option value="all">Todas las jornadas</option>
+                          </select>
                           <input className="filter-input" placeholder="🔍 Buscar por nombre o celular…" value={adminSearch} onChange={(event) => setAdminSearch(event.target.value)} />
                           <select className="filter-select" value={adminStatusFilter} onChange={(event) => setAdminStatusFilter(event.target.value as 'all' | QuinielaStatus)}>
                             <option value="all">Estados</option>
@@ -3437,7 +3649,9 @@ function App() {
                                     </option>
                                   ))}
                                 </select>
-                                <span>{filteredAdminMatches.length} partidos</span>
+                                <span>
+                                  {filteredAdminMatches.length} partidos · {matchOrderingAvailable ? 'arrastra ↕ para ordenar' : 'activa la migración de orden en Supabase'}
+                                </span>
                               </div>
                               <div className="matches-create-header">⚽ Partidos · {APP_CONFIG.edition}</div>
                               <div id="matches-create-list">
@@ -3445,8 +3659,28 @@ function App() {
                                   <div className="match-create-empty">No hay partidos para este filtro.</div>
                                 ) : null}
                                 {filteredAdminMatches.map((match, index) => (
-                                  <div className="match-create-row" key={match.id}>
-                                    <div className="mcr-num">{index + 1}</div>
+                                  <div
+                                    className={`match-create-row${draggingMatchId === match.id ? ' dragging' : ''}${dragOverMatchId === match.id && draggingMatchId !== match.id ? ' drag-over' : ''}`}
+                                    data-match-id={match.id}
+                                    key={match.id}
+                                  >
+                                    <div className="mcr-order">
+                                      <div className="mcr-num">{index + 1}</div>
+                                      <button
+                                        className="mcr-drag-handle"
+                                        disabled={!matchOrderingAvailable || reorderingMatchId !== null || editingMatchId === match.id || (matchOrderMeta.get(match.id)?.count ?? 0) < 2}
+                                        onKeyDown={(event) => handleMatchDragKeyDown(event, match)}
+                                        onPointerCancel={(event) => cancelMatchDrag(event, match)}
+                                        onPointerDown={(event) => startMatchDrag(event, match)}
+                                        onPointerMove={(event) => updateMatchDrag(event, match)}
+                                        onPointerUp={(event) => finishMatchDrag(event, match)}
+                                        title="Arrastra para mover el partido. También puedes usar las flechas del teclado."
+                                        type="button"
+                                        aria-label={`Mover ${match.local} vs ${match.visitante}. Arrastra hacia arriba o abajo.`}
+                                      >
+                                        <span aria-hidden="true">↕</span>
+                                      </button>
+                                    </div>
 
                                     {editingMatchId === match.id ? (
                                       <div className="mcr-edit-layout">

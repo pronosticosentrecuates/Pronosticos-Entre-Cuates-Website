@@ -5,6 +5,7 @@ export type Modalidad = '3 dobles' | '5 dobles'
 export interface Match {
   id: number
   jornadaId?: number
+  sortOrder?: number
   local: string
   visitante: string
   time: string
@@ -53,6 +54,31 @@ export type ToggleSelectionResult = {
 
 export function createEmptySelections(matches: Match[] = MATCHES): MatchSelection[] {
   return matches.map((match) => ({ partidoId: match.id, seleccion: [] }))
+}
+
+export function applyMatchOrder(matches: Match[], jornadaId: number, orderedMatchIds: number[]): Match[] {
+  const jornadaMatches = matches.filter((match) => match.jornadaId === jornadaId)
+
+  if (
+    jornadaMatches.length !== orderedMatchIds.length
+    || new Set(orderedMatchIds).size !== orderedMatchIds.length
+    || orderedMatchIds.some((id) => !jornadaMatches.some((match) => match.id === id))
+  ) {
+    return matches
+  }
+
+  const matchesById = new Map(jornadaMatches.map((match) => [match.id, match]))
+  const orderedMatches = orderedMatchIds.map((id, index) => ({
+    ...matchesById.get(id)!,
+    sortOrder: index + 1,
+  }))
+  let jornadaIndex = 0
+
+  return matches.map((match) => (
+    match.jornadaId === jornadaId
+      ? orderedMatches[jornadaIndex++]
+      : match
+  ))
 }
 
 export function getMaxDobles(modalidad: Modalidad): number {

@@ -16,6 +16,7 @@ END $$;
 
 CREATE TABLE IF NOT EXISTS public.matches (
   id integer PRIMARY KEY,
+  sort_order integer NOT NULL DEFAULT 0 CHECK (sort_order >= 0),
   local text NOT NULL,
   visitante text NOT NULL,
   time text,

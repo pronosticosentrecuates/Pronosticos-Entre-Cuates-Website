@@ -6,7 +6,7 @@ Aplicación React + Vite para registrar quinielas, administrar partidos y mostra
 
 1. Copia `.env.example` a `.env.local` y agrega la URL y llave publicable de Supabase.
 2. Ejecuta `supabase/schema.sql` en el SQL Editor de Supabase.
-3. Ejecuta todas las migraciones de `supabase/migrations/` en orden. La última migración, `20260724000000_security_hardening.sql`, es obligatoria: restringe los datos personales, endurece las RPC públicas, agrega límites antiabuso y depura el historial de auditoría.
+3. Ejecuta todas las migraciones de `supabase/migrations/` en orden. La migración `20260724000000_security_hardening.sql` restringe los datos personales, endurece las RPC públicas, agrega límites antiabuso y depura el historial de auditoría. La migración más reciente, `20260727000000_match_sort_order.sql`, habilita el orden personalizable de los partidos.
 4. Crea un usuario en Supabase Auth y asígnale el rol administrativo desde el SQL Editor:
 
 ```sql

@@ -3391,6 +3391,14 @@ body {
   background: #0d2244;
 }
 
+.admin-jornada-filter {
+  min-width: 230px;
+  border-color: rgba(0, 229, 255, 0.28);
+  background: rgba(0, 229, 255, 0.07);
+  color: var(--cyan);
+  font-weight: 700;
+}
+
 .admin-mobile-export {
   display: none;
 }
@@ -4100,6 +4108,13 @@ body {
   align-items: flex-start;
 }
 
+.mcr-order {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+}
+
 .mcr-num {
   width: 22px;
   height: 22px;
@@ -4114,6 +4129,65 @@ body {
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
+}
+
+.mcr-drag-handle {
+  width: 30px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid rgba(0, 229, 255, 0.28);
+  border-radius: 8px;
+  background: rgba(0, 229, 255, 0.08);
+  color: var(--cyan);
+  font-family: inherit;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  transition: border-color 0.15s, background 0.15s, color 0.15s, transform 0.15s;
+}
+
+.mcr-drag-handle:hover:not(:disabled) {
+  border-color: rgba(0, 229, 255, 0.65);
+  background: rgba(0, 229, 255, 0.16);
+  color: var(--white);
+  transform: scale(1.04);
+}
+
+.mcr-drag-handle:active:not(:disabled) {
+  cursor: grabbing;
+}
+
+.mcr-drag-handle:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
+.mcr-drag-handle:disabled {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.025);
+  color: rgba(255, 255, 255, 0.22);
+  cursor: not-allowed;
+}
+
+.match-create-row.dragging {
+  position: relative;
+  z-index: 2;
+  background: rgba(0, 229, 255, 0.1);
+  box-shadow: inset 3px 0 0 var(--cyan);
+}
+
+.match-create-row.dragging .mcr-drag-handle {
+  border-color: rgba(0, 229, 255, 0.8);
+  background: rgba(0, 229, 255, 0.2);
+  color: var(--white);
+  cursor: grabbing;
+}
+
+.match-create-row.drag-over {
+  box-shadow: inset 0 2px 0 rgba(0, 229, 255, 0.72);
 }
 
 .mcr-edit-layout {
@@ -5410,6 +5484,10 @@ select.rp-input option {
     grid-column: 1 / -1;
   }
 
+  #tab-quinielas .admin-jornada-filter {
+    grid-column: 1 / -1;
+  }
+
   #tab-quinielas .filter-select {
     padding: 9px 24px 9px 7px;
     font-size: 11px;
@@ -5557,15 +5635,17 @@ select.rp-input option {
 
   .match-create-row {
     display: grid;
-    grid-template-columns: 28px minmax(0, 1fr);
+    grid-template-columns: 72px minmax(0, 1fr);
     align-items: center;
     gap: 8px 10px;
     padding: 12px;
   }
 
-  .match-create-row .mcr-num {
-    grid-row: 1;
-    align-self: center;
+  .match-create-row .mcr-order {
+    grid-column: 1;
+    grid-row: 1 / span 3;
+    align-self: start;
+    flex-direction: column;
   }
 
   .match-create-row .mcr-teams,
