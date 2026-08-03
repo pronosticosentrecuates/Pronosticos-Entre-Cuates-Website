@@ -107,6 +107,26 @@ const CLUB_LOGOS: Record<string, string> = {
   Toluca: '/logos_equipos/toluca.svg',
 }
 
+const MLS_CLUB_LOGOS: Record<string, string> = {
+  'Charlotte FC': '/logos_equipos/mls/charlotte-fc.svg',
+  'FC Cincinnati': '/logos_equipos/mls/cincinnati.svg',
+  Cincinnati: '/logos_equipos/mls/cincinnati.svg',
+  'Columbus Crew': '/logos_equipos/mls/columbus.svg',
+  'Columbus C.': '/logos_equipos/mls/columbus.svg',
+  'FC Dallas': '/logos_equipos/mls/dallas.svg',
+  'Inter Miami CF': '/logos_equipos/mls/inter-miami.svg',
+  'Inter Miami': '/logos_equipos/mls/inter-miami.svg',
+  'Los Angeles Football Club': '/logos_equipos/mls/lafc.svg',
+  LAFC: '/logos_equipos/mls/lafc.svg',
+  'Minnesota United FC': '/logos_equipos/mls/minnesota.svg',
+  Minnesota: '/logos_equipos/mls/minnesota.svg',
+  'New York City Football Club': '/logos_equipos/mls/nyc.svg',
+  'New York City FC': '/logos_equipos/mls/nyc.svg',
+  'NYC FC': '/logos_equipos/mls/nyc.svg',
+  'Portland Timbers': '/logos_equipos/mls/portland.svg',
+  'Portland T.': '/logos_equipos/mls/portland.svg',
+}
+
 const LIGA_MX_TEAM_DISPLAY_NAMES = [
   'América',
   'Atlas',
@@ -130,9 +150,43 @@ const LIGA_MX_TEAM_DISPLAY_NAMES = [
   'Toluca',
 ]
 
+const MLS_TEAM_DISPLAY_NAMES = [
+  'Atlanta United',
+  'Austin FC',
+  'Charlotte FC',
+  'Chicago Fire FC',
+  'FC Cincinnati',
+  'Colorado Rapids',
+  'Columbus Crew',
+  'D.C. United',
+  'FC Dallas',
+  'Houston Dynamo FC',
+  'Sporting Kansas City',
+  'LA Galaxy',
+  'Los Angeles Football Club',
+  'Inter Miami CF',
+  'Minnesota United FC',
+  'CF Montréal',
+  'Nashville SC',
+  'New England Revolution',
+  'Red Bull New York',
+  'New York City Football Club',
+  'Orlando City',
+  'Philadelphia Union',
+  'Portland Timbers',
+  'Real Salt Lake',
+  'San Diego FC',
+  'San Jose Earthquakes',
+  'Seattle Sounders FC',
+  'St. Louis CITY SC',
+  'Toronto FC',
+  'Vancouver Whitecaps FC',
+]
+
 export const TEAM_LOGOS: Record<string, string> = {
   ...COUNTRY_LOGOS,
   ...CLUB_LOGOS,
+  ...MLS_CLUB_LOGOS,
 }
 
 export function getTeamDisplayName(teamName: string) {
@@ -150,4 +204,5 @@ export function getTeamDisplayName(teamName: string) {
 }
 
 export const LIGA_MX_TEAM_NAMES = LIGA_MX_TEAM_DISPLAY_NAMES
+export const MLS_TEAM_NAMES = MLS_TEAM_DISPLAY_NAMES
 export const INTERNATIONAL_TEAM_NAMES = Object.keys(COUNTRY_LOGOS)

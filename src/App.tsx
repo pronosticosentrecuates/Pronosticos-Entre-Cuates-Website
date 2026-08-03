@@ -15,7 +15,7 @@ import {
   type Modalidad,
   type PickOption,
 } from './data'
-import { APP_CONFIG, INTERNATIONAL_TEAM_NAMES, LIGA_MX_TEAM_NAMES, TEAM_LOGOS } from './config'
+import { APP_CONFIG, INTERNATIONAL_TEAM_NAMES, LIGA_MX_TEAM_NAMES, MLS_TEAM_NAMES, TEAM_LOGOS } from './config'
 import {
   deleteJornadaById,
   deleteMatchById,
@@ -70,7 +70,7 @@ type AdminDeleteConfirm = {
   name: string
 } | null
 
-type TeamCatalog = 'liga-mx' | 'internacional'
+type TeamCatalog = 'liga-mx' | 'mls' | 'internacional'
 
 type ImportedMatch = Omit<Match, 'id'> & {
   sourceId: string
@@ -443,7 +443,11 @@ function App() {
   const [showEditVisitanteSuggestions, setShowEditVisitanteSuggestions] = useState(false)
   const [teamCatalog, setTeamCatalog] = useState<TeamCatalog>('liga-mx')
 
-  const TEAM_NAMES = teamCatalog === 'liga-mx' ? LIGA_MX_TEAM_NAMES : INTERNATIONAL_TEAM_NAMES
+  const TEAM_NAMES = teamCatalog === 'liga-mx'
+    ? LIGA_MX_TEAM_NAMES
+    : teamCatalog === 'mls'
+      ? MLS_TEAM_NAMES
+      : INTERNATIONAL_TEAM_NAMES
   const filterTeams = (q: string) => {
     const v = q.trim().toLowerCase()
     if (!v) return TEAM_NAMES
@@ -452,6 +456,7 @@ function App() {
   const renderTeamCatalogToggle = () => (
     <div className="team-catalog-toggle" aria-label="Filtro de equipos">
       <button className={teamCatalog === 'liga-mx' ? 'active' : ''} onClick={() => setTeamCatalog('liga-mx')} type="button">Liga MX</button>
+      <button className={teamCatalog === 'mls' ? 'active' : ''} onClick={() => setTeamCatalog('mls')} type="button">MLS</button>
       <button className={teamCatalog === 'internacional' ? 'active' : ''} onClick={() => setTeamCatalog('internacional')} type="button">Internacional</button>
     </div>
   )
