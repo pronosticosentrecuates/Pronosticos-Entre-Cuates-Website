@@ -453,13 +453,54 @@ function App() {
     if (!v) return TEAM_NAMES
     return TEAM_NAMES.filter((t) => t.toLowerCase().includes(v))
   }
-  const renderTeamCatalogToggle = () => (
-    <div className="team-catalog-toggle" aria-label="Filtro de equipos">
-      <button className={teamCatalog === 'liga-mx' ? 'active' : ''} onClick={() => setTeamCatalog('liga-mx')} type="button">Liga MX</button>
-      <button className={teamCatalog === 'mls' ? 'active' : ''} onClick={() => setTeamCatalog('mls')} type="button">MLS</button>
-      <button className={teamCatalog === 'internacional' ? 'active' : ''} onClick={() => setTeamCatalog('internacional')} type="button">Internacional</button>
-    </div>
-  )
+  const renderTeamCatalogToggle = () => {
+    const catalogOptions: Array<{
+      id: TeamCatalog
+      badge: string
+      label: string
+      detail: string
+    }> = [
+      { id: 'liga-mx', badge: 'MX', label: 'Liga MX', detail: `${LIGA_MX_TEAM_NAMES.length} equipos` },
+      { id: 'mls', badge: 'US', label: 'MLS', detail: `${MLS_TEAM_NAMES.length} equipos` },
+      { id: 'internacional', badge: 'INT', label: 'Internacional', detail: `${INTERNATIONAL_TEAM_NAMES.length} selecciones` },
+    ]
+    const activeCatalog = catalogOptions.find((option) => option.id === teamCatalog) ?? catalogOptions[0]
+
+    return (
+      <div className="team-catalog-picker">
+        <div className="team-catalog-heading">
+          <div>
+            <span className="team-catalog-eyebrow">Catálogo de equipos</span>
+            <span className="team-catalog-helper">Elige de dónde quieres buscar</span>
+          </div>
+          <span className="team-catalog-status">{activeCatalog.label} activa</span>
+        </div>
+        <div className="team-catalog-toggle" aria-label="Catálogo de equipos" role="radiogroup">
+          {catalogOptions.map((option) => {
+            const isActive = teamCatalog === option.id
+
+            return (
+              <button
+                aria-checked={isActive}
+                className={isActive ? 'active' : ''}
+                key={option.id}
+                onClick={() => setTeamCatalog(option.id)}
+                role="radio"
+                type="button"
+              >
+                <span className="team-catalog-badge" aria-hidden="true">{option.badge}</span>
+                <span className="team-catalog-copy">
+                  <strong>{option.label}</strong>
+                  <small>{option.detail}</small>
+                </span>
+                <span className="team-catalog-check" aria-hidden="true">✓</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
   const [toast, setToast] = useState<ToastState>(null)
   const [noticeModal, setNoticeModal] = useState<string | null>(null)
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null)
