@@ -4268,6 +4268,8 @@ body {
 }
 
 .mcr-drag-handle {
+  display: grid;
+  place-items: center;
   width: 30px;
   height: 32px;
   padding: 0;
@@ -4283,6 +4285,17 @@ body {
   touch-action: none;
   user-select: none;
   transition: border-color 0.15s, background 0.15s, color 0.15s, transform 0.15s;
+}
+
+.mcr-drag-handle svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
 }
 
 .mcr-drag-handle:hover:not(:disabled) {

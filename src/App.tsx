@@ -3724,7 +3724,9 @@ function App() {
                                         type="button"
                                         aria-label={`Mover ${match.local} vs ${match.visitante}. Arrastra hacia arriba o abajo.`}
                                       >
-                                        <span aria-hidden="true">↕</span>
+                                        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24">
+                                          <path d="M12 3v18M8 7l4-4 4 4M8 17l4 4 4-4" />
+                                        </svg>
                                       </button>
                                     </div>
 
