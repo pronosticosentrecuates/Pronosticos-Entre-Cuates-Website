@@ -189,6 +189,12 @@ export const TEAM_LOGOS: Record<string, string> = {
   ...MLS_CLUB_LOGOS,
 }
 
+export function getTeamLogoSource(teamName: string) {
+  const normalizedTeamName = teamName.trim().toLowerCase()
+  return TEAM_LOGOS[teamName]
+    ?? Object.entries(TEAM_LOGOS).find(([name]) => name.trim().toLowerCase() === normalizedTeamName)?.[1]
+}
+
 export function getTeamDisplayName(teamName: string) {
   const normalizedTeamName = teamName.trim().toLowerCase()
 

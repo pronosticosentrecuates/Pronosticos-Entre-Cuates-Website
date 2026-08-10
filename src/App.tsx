@@ -15,7 +15,7 @@ import {
   type Modalidad,
   type PickOption,
 } from './data'
-import { APP_CONFIG, INTERNATIONAL_TEAM_NAMES, LIGA_MX_TEAM_NAMES, MLS_TEAM_NAMES, TEAM_LOGOS } from './config'
+import { APP_CONFIG, getTeamLogoSource, INTERNATIONAL_TEAM_NAMES, LIGA_MX_TEAM_NAMES, MLS_TEAM_NAMES } from './config'
 import {
   deleteJornadaById,
   deleteMatchById,
@@ -47,6 +47,7 @@ import {
 } from './services/quinielas'
 import type { Jornada, JornadaStatus, PaymentStatus, QuinielaStatus, SavedQuiniela, Tournament, TournamentStatus } from './types'
 import { hasValidPrivateLookupFactor, sanitizeCsvCell } from './security'
+import { drawPdfMatchHeader, loadPdfTeamLogoDataUrls, sortPdfRowsByPoints } from './pdf'
 import { getSupabase } from '../utils/supabase'
 
 type AppView = 'home' | 'registro' | 'admin'
@@ -210,11 +211,6 @@ function getPaymentLabel(status?: PaymentStatus) {
 
 function getSelectionChipClass(selection: MatchSelection) {
   return selection.seleccion.length >= 2 ? 'multi' : selection.seleccion[0] || 'empty'
-}
-
-function getTeamLogoSource(teamName: string) {
-  const normalizedTeamName = teamName.trim().toLowerCase()
-  return TEAM_LOGOS[teamName] ?? Object.entries(TEAM_LOGOS).find(([name]) => name.trim().toLowerCase() === normalizedTeamName)?.[1]
 }
 
 function TeamLogo({ teamName, fallback, className }: { teamName: string; fallback: string; className: string }) {
@@ -1539,7 +1535,10 @@ function App() {
         loadQuinielas(item.id),
         loadMatches(item.id),
       ])
-      const jornadaQuinielas = loadedQuinielas.sort((a, b) => a.id - b.id)
+      const jornadaQuinielas = sortPdfRowsByPoints(
+        loadedQuinielas,
+        (quiniela) => countQuinielaPoints(quiniela, jornadaMatches),
+      )
 
       if (jornadaQuinielas.length === 0) {
         window.alert('Esta jornada no tiene quinielas registradas.')
@@ -1575,15 +1574,8 @@ function App() {
         24,
         (tableWidth - idColumnWidth - nameColumnWidth - pointsColumnWidth) / matchCount,
       )
-      const pdfTeamLabel = (teamName: string) => teamName
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-zA-Z0-9]/g, '')
-        .slice(0, 3)
-        .toUpperCase()
-      const matchHeaders = jornadaMatches.map((match) => (
-        `${pdfTeamLabel(match.local)}\nvs\n${pdfTeamLabel(match.visitante)}`
-      ))
+      const matchHeaders = jornadaMatches.map(() => '')
+      const teamLogoDataUrls = await loadPdfTeamLogoDataUrls(jornadaMatches)
       const pointTotals = jornadaQuinielas.map((quiniela) => countQuinielaPoints(quiniela, jornadaMatches))
       const maxPoints = pointTotals.length > 0 ? Math.max(...pointTotals) : 0
       const minPoints = pointTotals.length > 0 ? Math.min(...pointTotals) : 0
@@ -1708,6 +1700,14 @@ function App() {
             data.cell.styles.textColor = hasPointSpread && points === minPoints ? [255, 255, 255] : [0, 0, 0]
           }
         },
+        didDrawCell: (data) => {
+          if (data.section !== 'head') return
+          const matchIndex = data.column.index - 2
+
+          if (matchIndex >= 0 && matchIndex < jornadaMatches.length) {
+            drawPdfMatchHeader(pdf, data.cell, jornadaMatches[matchIndex], teamLogoDataUrls)
+          }
+        },
       })
 
       const pageCount = pdf.getNumberOfPages()
@@ -1758,6 +1758,11 @@ function App() {
       return
     }
 
+    const pdfRankingRows = sortPdfRowsByPoints(
+      registroRankingRows,
+      (quiniela) => countQuinielaPoints(quiniela, registroMatches),
+    )
+
     const tournamentName = jornada?.tournamentId ? tournaments.find((item) => item.id === jornada.tournamentId)?.nombre : ''
     const pdfTitle = jornadaTitle.toUpperCase()
     const pdfSubtitle = tournamentName ? `${tournamentName.toUpperCase()} - ${pdfTitle}` : pdfTitle
@@ -1789,20 +1794,13 @@ function App() {
         24,
         (tableWidth - idColumnWidth - nameColumnWidth - pointsColumnWidth) / matchCount,
       )
-      const pdfTeamLabel = (teamName: string) => teamName
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-zA-Z0-9]/g, '')
-        .slice(0, 3)
-        .toUpperCase()
-      const matchHeaders = registroMatches.map((match) => (
-        `${pdfTeamLabel(match.local)}\nvs\n${pdfTeamLabel(match.visitante)}`
-      ))
-      const pointTotals = registroRankingRows.map((quiniela) => countQuinielaPoints(quiniela, registroMatches))
+      const matchHeaders = registroMatches.map(() => '')
+      const teamLogoDataUrls = await loadPdfTeamLogoDataUrls(registroMatches)
+      const pointTotals = pdfRankingRows.map((quiniela) => countQuinielaPoints(quiniela, registroMatches))
       const maxPoints = pointTotals.length > 0 ? Math.max(...pointTotals) : 0
       const minPoints = pointTotals.length > 0 ? Math.min(...pointTotals) : 0
       const hasPointSpread = maxPoints > minPoints
-      const body = registroRankingRows.map((quiniela, rowIndex) => [
+      const body = pdfRankingRows.map((quiniela, rowIndex) => [
         String(quiniela.folio ?? quiniela.id),
         quiniela.nombre,
         ...registroMatches.map((match) => {
@@ -1901,7 +1899,7 @@ function App() {
           const matchIndex = data.column.index - 2
 
           if (matchIndex >= 0 && matchIndex < registroMatches.length) {
-            const quiniela = registroRankingRows[rowIndex]
+            const quiniela = pdfRankingRows[rowIndex]
             const match = registroMatches[matchIndex]
             const selection = quiniela?.selecciones.find((item) => item.partidoId === match.id)
             const outcome = getMatchOutcome(match.localScore ?? null, match.visitanteScore ?? null)
@@ -1918,6 +1916,14 @@ function App() {
                 ? [255, 77, 79]
                 : [255, 242, 0]
             data.cell.styles.textColor = hasPointSpread && points === minPoints ? [255, 255, 255] : [0, 0, 0]
+          }
+        },
+        didDrawCell: (data) => {
+          if (data.section !== 'head') return
+          const matchIndex = data.column.index - 2
+
+          if (matchIndex >= 0 && matchIndex < registroMatches.length) {
+            drawPdfMatchHeader(pdf, data.cell, registroMatches[matchIndex], teamLogoDataUrls)
           }
         },
       })
@@ -1972,6 +1978,18 @@ function App() {
     clonedTable
       .querySelectorAll('.registro-mobile-title-row, .registro-mobile-match-stack-row, .registro-mobile-pick-head-row')
       .forEach((row) => row.remove())
+
+    const clonedTableBody = clonedTable.tBodies.item(0)
+    if (clonedTableBody) {
+      const clonedRowsById = new Map(
+        Array.from(clonedTableBody.querySelectorAll<HTMLTableRowElement>('tr[data-quiniela-id]'))
+          .map((row) => [row.dataset.quinielaId, row]),
+      )
+      pdfRankingRows.forEach((quiniela) => {
+        const row = clonedRowsById.get(String(quiniela.id))
+        if (row) clonedTableBody.appendChild(row)
+      })
+    }
 
     const matchCount = Math.max(registroMatches.length, 1)
     const useLandscapePdf = registroMatches.length > 10
@@ -2404,7 +2422,7 @@ function App() {
               : 'middle'
 
             return (
-            <tr key={quiniela.id}>
+            <tr data-quiniela-id={quiniela.id} key={quiniela.id}>
               <td className="registro-id-col">{quiniela.folio ?? quiniela.id}</td>
               <td className="registro-name-col">{quiniela.nombre}</td>
               {showStatus ? <td className="registro-phone-col">{quiniela.celular || '-'}</td> : null}
