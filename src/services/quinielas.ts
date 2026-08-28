@@ -262,11 +262,36 @@ export async function loadTournaments(): Promise<Tournament[]> {
 
 export async function loadQuinielas(jornadaId?: number): Promise<SavedQuiniela[]> {
   const supabase = requireSupabase()
-  let query = supabase.from('quinielas').select('*, selections(partido_id, seleccion), combinations(combination)').order('id', { ascending: true })
-  if (jornadaId) query = query.eq('jornada_id', jornadaId)
-  const { data, error } = await query
-  if (error) throw error
-  return ((data ?? []) as QuinielaRow[]).map(mapQuiniela)
+  const rows: QuinielaRow[] = []
+  let lastId: number | null = null
+
+  // PostgREST may cap each response independently of the requested range.
+  // Keyset pagination keeps loading until the server has no more rows.
+  while (true) {
+    let query = supabase
+      .from('quinielas')
+      .select('*, selections(partido_id, seleccion), combinations(combination)')
+      .order('id', { ascending: true })
+      .limit(100)
+
+    if (jornadaId) query = query.eq('jornada_id', jornadaId)
+    if (lastId !== null) query = query.gt('id', lastId)
+
+    const { data, error } = await query
+    if (error) throw error
+
+    const page = (data ?? []) as QuinielaRow[]
+    if (page.length === 0) break
+
+    rows.push(...page)
+    const nextLastId = page[page.length - 1].id
+    if (lastId !== null && nextLastId <= lastId) {
+      throw new Error('No se pudieron paginar las quinielas correctamente.')
+    }
+    lastId = nextLastId
+  }
+
+  return rows.map(mapQuiniela)
 }
 
 export async function registerQuiniela(quiniela: QuinielaData, status: QuinielaStatus = 'pending'): Promise<string> {
