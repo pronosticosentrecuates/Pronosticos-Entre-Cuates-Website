@@ -785,7 +785,7 @@ function App() {
   const jornadaPendientePorFecha = Boolean(jornada?.openAt && now < new Date(jornada.openAt).getTime() && jornada.status === 'draft')
   const jornadaCerradaPorFecha = Boolean(jornada?.closeAt && now >= new Date(jornada.closeAt).getTime())
   const registrosAbiertos = jornadaAbiertaPorFecha
-  const puedeAgregar = registrosAbiertos && progresoCompleto && nombreValido && celularValido && doblesUsados <= maxDobles
+  const puedeAgregar = registrosAbiertos && progresoCompleto && nombreValido && celularValido && doblesUsados === maxDobles
   const totalGuardado = draftQuinielas.reduce((sum, quiniela) => sum + quiniela.costo, 0)
   const jornadaTitle = jornada?.nombre ?? APP_CONFIG.edition
   const firstPrizeLabel = formatPrizeLabel(jornada?.firstPrize, APP_CONFIG.firstPrize)
@@ -1036,8 +1036,8 @@ function App() {
       return
     }
 
-    if (adminQuinielaDobles > adminQuinielaMaxDobles) {
-      window.alert(`La modalidad ${adminQuinielaModalidad} solo permite ${adminQuinielaMaxDobles} dobles.`)
+    if (adminQuinielaDobles !== adminQuinielaMaxDobles) {
+      window.alert(`La modalidad ${adminQuinielaModalidad} requiere exactamente ${adminQuinielaMaxDobles} dobles.`)
       return
     }
 
@@ -1098,8 +1098,8 @@ function App() {
       return
     }
 
-    if (doblesUsados > maxDobles) {
-      window.alert(`La modalidad ${modalidad} solo permite ${maxDobles} dobles.`)
+    if (doblesUsados !== maxDobles) {
+      window.alert(`La modalidad ${modalidad} requiere exactamente ${maxDobles} dobles.`)
       return
     }
 
@@ -3102,7 +3102,7 @@ function App() {
                 </button>
               ))}
             </div>
-            <div className="mode-hint">Cada modalidad define el costo y el máximo de dobles permitidos.</div>
+            <div className="mode-hint">Debes seleccionar exactamente 3 o 5 dobles, según la modalidad.</div>
           </div>
 
           {dataLoading ? <div className="app-notice">Cargando datos de la jornada...</div> : null}
@@ -3124,7 +3124,7 @@ function App() {
                   <div className="progress-track">
                     <div className="progress-fill" style={progresoStyle} />
                   </div>
-                  <div className="progress-state">{progresoCompleto ? 'Listo para guardar la quiniela' : 'Completa los partidos para terminar'}</div>
+                  <div className="progress-state">{progresoCompleto ? (doblesUsados === maxDobles ? 'Listo para guardar la quiniela' : `Selecciona exactamente ${maxDobles} dobles`) : 'Completa los partidos para terminar'}</div>
                 </div>
 
                 <div className="matches-content">
@@ -3192,7 +3192,7 @@ function App() {
                       </button>
                     ))}
                   </div>
-                  <div className="mode-hint">Cada modalidad define el costo y el máximo de dobles permitidos.</div>
+                  <div className="mode-hint">Debes seleccionar exactamente 3 o 5 dobles, según la modalidad.</div>
                 </div>
 
                 <div className="input-block">
@@ -4620,7 +4620,7 @@ function App() {
                   <div className="admin-quiniela-actions admin-quiniela-modal-actions">
                     <button
                       className="act-btn save admin-modal-confirm"
-                      disabled={savingAdminQuiniela || !adminQuinielaCompleta || !adminQuinielaNombreValido || !adminQuinielaCelularValido || adminQuinielaDobles > adminQuinielaMaxDobles}
+                      disabled={savingAdminQuiniela || !adminQuinielaCompleta || !adminQuinielaNombreValido || !adminQuinielaCelularValido || adminQuinielaDobles !== adminQuinielaMaxDobles}
                       onClick={saveAdminQuiniela}
                       type="button"
                     >
