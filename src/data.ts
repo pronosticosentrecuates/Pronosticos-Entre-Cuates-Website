@@ -127,8 +127,7 @@ export function generateCombinations(selecciones: MatchSelection[]): PickOption[
 }
 
 export function generateRandomSelections(modalidad: Modalidad, matches: Match[] = MATCHES): MatchSelection[] {
-  const maxDobles = getMaxDobles(modalidad)
-  const targetDobles = Math.floor(Math.random() * (Math.min(maxDobles, matches.length) + 1))
+  const targetDobles = Math.min(getMaxDobles(modalidad), matches.length)
   const doubleIndices = new Set<number>()
 
   while (doubleIndices.size < targetDobles) {

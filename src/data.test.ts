@@ -4,6 +4,7 @@ import {
   countDobles,
   createEmptySelections,
   generateCombinations,
+  generateRandomSelections,
   getCosto,
   getMaxDobles,
   toggleSelection,
@@ -68,6 +69,21 @@ describe('quiniela rules', () => {
     expect(countDobles(selections)).toBe(3)
     expect(blocked.blocked).toContain('solo permite 3 dobles')
     expect(countDobles(blocked.selecciones)).toBe(3)
+  })
+
+  it('generates the exact number of doubles required by each modality', () => {
+    const sixMatches = Array.from({ length: 6 }, (_, index) => ({
+      id: index + 1,
+      local: `L${index}`,
+      visitante: `V${index}`,
+      time: '',
+      timeClass: '',
+      localImg: '',
+      visitanteImg: '',
+    }))
+
+    expect(countDobles(generateRandomSelections('3 dobles', sixMatches))).toBe(3)
+    expect(countDobles(generateRandomSelections('5 dobles', sixMatches))).toBe(5)
   })
 
   it('does not allow triples because modalities are based on doubles', () => {
