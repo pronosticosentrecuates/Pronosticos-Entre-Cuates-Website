@@ -1473,7 +1473,10 @@ function App() {
         registeredFolios.push(await registerQuiniela(quiniela, 'pending'))
       }
 
-      message += `\nFOLIOS: ${registeredFolios.join(', ')}\nLos datos completos quedaron protegidos en el panel administrativo.`
+      const quinielaPicks = draftQuinielas
+        .map((quiniela) => quiniela.selecciones.map((selection) => selection.seleccion.join('')).join('-'))
+        .join('\n')
+      message += `\nFOLIOS: ${registeredFolios.join(', ')}\n${quinielaPicks}\nLos datos completos quedaron protegidos en el panel administrativo.`
       await refreshQuinielas()
       window.localStorage.setItem(QUINIELAS_REFRESH_STORAGE_KEY, JSON.stringify(registeredFolios))
       setDraftQuinielas([])
