@@ -154,7 +154,7 @@ function getLigaMxMatchTimeOverride(season: string, round: string, homeTeam: str
 
 function getMexicoDateTimeParts(dateEvent?: string | null, strTime?: string | null, strTimestamp?: string | null) {
   if (!dateEvent && !strTimestamp) {
-    return { value: 'TBD', timeClass: '' }
+    return { value: 'Por Definir', timeClass: '' }
   }
 
   const time = strTime && /^\d{2}:\d{2}/.test(strTime) ? strTime.slice(0, 5) : '00:00'
@@ -163,7 +163,7 @@ function getMexicoDateTimeParts(dateEvent?: string | null, strTime?: string | nu
     : `${dateEvent}T${time}:00`
   const utcDate = new Date(`${timestamp.replace(/\.\d+$/, '').replace(/Z$/, '')}Z`)
   if (Number.isNaN(utcDate.getTime())) {
-    return { value: 'TBD', timeClass: '' }
+    return { value: 'Por Definir', timeClass: '' }
   }
 
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -308,6 +308,8 @@ function parseMatchTime(value: string) {
 }
 
 function formatMatchTime(value: string) {
+  if (!value.trim() || value.trim().toUpperCase() === 'TBD') return 'Por Definir'
+
   const { date, time } = parseMatchTime(value)
   if (!date) {
     return value
@@ -1201,7 +1203,7 @@ function App() {
       jornadaId: selectedJornadaId,
       local,
       visitante,
-      time: buildMatchTime(newMatchDate, newMatchTime, 'TBD'),
+      time: buildMatchTime(newMatchDate, newMatchTime, 'Por Definir'),
       timeClass,
       localImg: '',
       visitanteImg: '',
