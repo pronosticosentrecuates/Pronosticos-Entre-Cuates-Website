@@ -127,17 +127,26 @@ const MLS_CLUB_LOGOS: Record<string, string> = {
   'Portland T.': '/logos_equipos/mls/portland.svg',
 }
 
+// Agrega aquí los escudos restantes cuando estén disponibles en public/logos_equipos/expansion.
+const EXPANSION_CLUB_LOGOS: Record<string, string> = {
+  'Cancún FC': '/logos_equipos/expansion/cancun.svg',
+  'Cancun FC': '/logos_equipos/expansion/cancun.svg',
+  Cancún: '/logos_equipos/expansion/cancun.svg',
+  Cancun: '/logos_equipos/expansion/cancun.svg',
+  Tapatío: '/logos_equipos/expansion/tapatio.svg',
+  Tapatio: '/logos_equipos/expansion/tapatio.svg',
+  'CD Tapatío': '/logos_equipos/expansion/tapatio.svg',
+}
+
 const LIGA_MX_TEAM_DISPLAY_NAMES = [
   'América',
   'Atlas',
   'Atlante',
   'Atletico de San Luis',
   'Chivas',
-  'Correcaminos',
   'Cruz Azul',
   'Juárez',
   'León',
-  'Mineros',
   'Monterrey',
   'Necaxa',
   'Pachuca',
@@ -148,6 +157,27 @@ const LIGA_MX_TEAM_DISPLAY_NAMES = [
   'Tigres',
   'Tijuana',
   'Toluca',
+]
+
+// Participantes del Apertura 2026, verificados el 28 de septiembre de 2026:
+// https://www.foxsports.com.mx/2026/07/23/liga-de-expansion-que-clubes-se-fueron-y-cuales-siguen-en-el-torneo-para-la-temporada-2627/
+const EXPANSION_TEAM_DISPLAY_NAMES = [
+  'Alacranes de Durango',
+  'Alebrijes de Oaxaca',
+  'Atlético La Paz',
+  'Atlético Morelia',
+  'Cancún FC',
+  'Correcaminos',
+  'Cruz Azul Hidalgo',
+  'Dorados de Sinaloa',
+  'Jaiba Brava',
+  'Leones Negros UDG',
+  'Mineros de Zacatecas',
+  'Piratas FC',
+  'Tapatío',
+  'Tepatitlán FC',
+  'Tlaxcala FC',
+  'Venados FC',
 ]
 
 const MLS_TEAM_DISPLAY_NAMES = [
@@ -186,6 +216,7 @@ const MLS_TEAM_DISPLAY_NAMES = [
 export const TEAM_LOGOS: Record<string, string> = {
   ...COUNTRY_LOGOS,
   ...CLUB_LOGOS,
+  ...EXPANSION_CLUB_LOGOS,
   ...MLS_CLUB_LOGOS,
 }
 
@@ -210,5 +241,6 @@ export function getTeamDisplayName(teamName: string) {
 }
 
 export const LIGA_MX_TEAM_NAMES = LIGA_MX_TEAM_DISPLAY_NAMES
+export const EXPANSION_TEAM_NAMES = EXPANSION_TEAM_DISPLAY_NAMES
 export const MLS_TEAM_NAMES = MLS_TEAM_DISPLAY_NAMES
 export const INTERNATIONAL_TEAM_NAMES = Object.keys(COUNTRY_LOGOS)
