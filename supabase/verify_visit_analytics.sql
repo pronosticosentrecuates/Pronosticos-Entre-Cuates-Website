@@ -14,6 +14,9 @@ BEGIN
     IF NOT has_function_privilege(role_name, 'public.record_site_visit(uuid)', 'EXECUTE') THEN
       RAISE EXCEPTION 'Missing visit recording permission for %', role_name;
     END IF;
+    IF has_function_privilege(role_name, 'public.record_site_visit_with_ip(uuid,inet)', 'EXECUTE') THEN
+      RAISE EXCEPTION 'Browser role can supply arbitrary IP: %', role_name;
+    END IF;
   END LOOP;
   IF NOT (SELECT relrowsecurity FROM pg_class WHERE oid = 'public.site_visits'::regclass) THEN
     RAISE EXCEPTION 'RLS must be enabled';
@@ -27,6 +30,13 @@ BEGIN
   PERFORM public.record_site_visit(test_visitor);
   IF (SELECT count(*) FROM public.site_visits WHERE visitor_id = test_visitor) <> 2 THEN
     RAISE EXCEPTION 'Return visit was not counted';
+  END IF;
+  PERFORM public.record_site_visit_with_ip(test_visitor, '2001:db8::1'::inet);
+  IF NOT EXISTS (SELECT 1 FROM public.site_visits WHERE visitor_id = test_visitor AND ip_address = '2001:db8::1'::inet) THEN
+    RAISE EXCEPTION 'IP capture failed';
+  END IF;
+  IF (SELECT count(*) FROM public.site_visits WHERE visitor_id = test_visitor) <> 2 THEN
+    RAISE EXCEPTION 'IP recording duplicated a visit';
   END IF;
 END;
 $$;

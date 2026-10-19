@@ -15,7 +15,7 @@ export async function recordVisit(): Promise<void> {
       visitorId = crypto.randomUUID()
       localStorage.setItem(VISITOR_KEY, visitorId)
     }
-    await supabase.rpc('record_site_visit', { p_visitor_id: visitorId })
+    await supabase.functions.invoke('record-visit', { body: { visitor_id: visitorId } })
   } catch {
     // Storage restrictions or connectivity failures do not affect registration.
   }

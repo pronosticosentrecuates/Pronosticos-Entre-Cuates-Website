@@ -4807,6 +4807,7 @@ function App() {
       {activeView !== 'admin' ? (
         <footer className="footer">
           Desarrollado por <a href="#">RRAD 2026</a> - Todos los derechos reservados
+          <p>Registramos visitas, un identificador de navegador y la dirección IP para estadísticas privadas del sitio.</p>
         </footer>
       ) : null}
     </div>
