@@ -3061,11 +3061,11 @@ function App() {
             <div className="hero-inner">
               <div className="hero-prize" aria-label="Premios de la jornada">
                 <div className="hero-prize-item">
-                  <span className="label">Primer lugar</span>
+                  <span className="label"><img className="prize-trophy" src="/trofeo-dorado.svg" alt="" aria-hidden="true" />Primer lugar</span>
                   <strong className="amount">{firstPrizeLabel}</strong>
                 </div>
                 <div className="hero-prize-item">
-                  <span className="label">Segundo lugar acumulado</span>
+                  <span className="label"><img className="prize-trophy" src="/trofeo-plateado.svg" alt="" aria-hidden="true" /><span className="second-prize-label">Segundo lugar <span>acumulado</span></span></span>
                   <strong className="amount">{secondPrizeLabel}</strong>
                 </div>
               </div>
