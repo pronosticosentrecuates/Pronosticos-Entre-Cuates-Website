@@ -1,5 +1,7 @@
 # Estadísticas privadas de visitas
 
+> Sistema anterior, desactivado en la web. La integración actual utiliza Google Tag Manager `GTM-P9QQHBLT` y Google Analytics (ver README). No ejecutes estos pasos para activar Google Analytics. Se conserva esta documentación como referencia de la implementación anterior; los datos que ya existan en Supabase no se eliminan.
+
 ## Activación
 
 1. En el SQL Editor del proyecto Supabase, ejecuta `migrations/20261019000000_private_visit_analytics.sql` una sola vez.

@@ -24,7 +24,9 @@ npm run dev
 
 ## Verificación
 
-Las estadísticas de visitas se consultan exclusivamente desde Supabase, sin acceso desde el panel administrativo de la web. Consulta [la guía de activación](supabase/VISITAS.md).
+Las visitas se medirán con Google Analytics mediante el contenedor Google Tag Manager `GTM-P9QQHBLT`, instalado en `index.html`. En Tag Manager, configura una etiqueta de Google con el ID de medición `G-...` de tu propiedad GA4 y publica el contenedor. Consulta las estadísticas desde tu cuenta de Google Analytics; no se muestran en el panel de la web. El sitio ya no invoca el registro de visitas/IP de Supabase.
+
+La CSP en `index.html` y `public/_headers` permite el contenedor, la vista previa y Analytics básico. El script inicial está autorizado mediante SHA-256: si modificas su contenido, recalcula el hash en ambos archivos. Después de publicar la web, comprueba la etiqueta con Tag Assistant y el informe de tiempo real de Analytics. No envíes nombres, teléfonos ni datos de quinielas como parámetros de Analytics.
 
 ```bash
 npm run lint
