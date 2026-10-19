@@ -48,11 +48,14 @@ body {
   min-height: 100vh;
   margin-left: 0;
   overflow-x: visible;
-  /* Fondo compuesto: degradados y patrón SVG embebido */
+  /* Tonos del estadio difuminados: luces azules, césped y destellos dorados. */
   background-image:
-    radial-gradient(ellipse at 20% 0%, rgba(21, 101, 192, 0.4) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 100%, rgba(0, 229, 255, 0.15) 0%, transparent 50%),
-    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%231565c0' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    radial-gradient(ellipse at 12% 12%, rgba(15, 111, 219, 0.48) 0%, transparent 58%),
+    radial-gradient(ellipse at 88% 30%, rgba(0, 146, 224, 0.28) 0%, transparent 52%),
+    radial-gradient(ellipse at 8% 82%, rgba(213, 171, 28, 0.12) 0%, transparent 42%),
+    radial-gradient(ellipse at 65% 100%, rgba(35, 122, 40, 0.32) 0%, transparent 58%),
+    linear-gradient(160deg, #06162e 0%, #08233d 52%, #071d20 100%);
+  background-attachment: fixed;
 }
 
 #app {
@@ -303,9 +306,9 @@ body {
   color: var(--cyan);
 }
 
-/* Hero principal con degradado y borde cian */
+/* Hero principal con fondo de estadio y borde cian */
 .hero {
-  background: linear-gradient(135deg, #0a1628 0%, #1565c0 50%, #0a1628 100%);
+  background: #0a1628 url('/encabezado-estadio.png') center 65% / cover no-repeat;
   border-bottom: 2px solid var(--cyan);
   padding: 28px var(--page-gutter) 20px;
   position: relative;
@@ -313,18 +316,13 @@ body {
   text-align: center;
 }
 
-/* Overlay sutil en el hero: líneas diagonales repetidas */
+/* Sombra sutil para mantener legible la información sobre el estadio */
 .hero::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: repeating-linear-gradient(
-    45deg,
-    transparent,
-    transparent 10px,
-    rgba(255, 255, 255, 0.02) 10px,
-    rgba(255, 255, 255, 0.02) 20px
-  );
+  background: linear-gradient(to bottom, rgba(4, 15, 35, 0.2), rgba(4, 15, 35, 0.5));
+  pointer-events: none;
 }
 
 /* Contenedor interno del hero centrado y con límites de ancho */
