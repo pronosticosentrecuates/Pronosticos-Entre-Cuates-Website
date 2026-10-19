@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import './style.css'
+import { recordVisit } from './services/analytics'
 
 const rootElement = document.querySelector('#app')
 
@@ -14,4 +15,6 @@ ReactDOM.createRoot(rootElement).render(
     <App />
   </React.StrictMode>,
 )
+
+void recordVisit()
 

@@ -24,6 +24,8 @@ npm run dev
 
 ## Verificación
 
+Las estadísticas de visitas se consultan exclusivamente desde Supabase, sin acceso desde el panel administrativo de la web. Consulta [la guía de activación](supabase/VISITAS.md).
+
 ```bash
 npm run lint
 npm run typecheck
