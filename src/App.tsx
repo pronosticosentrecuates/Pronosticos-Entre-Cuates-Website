@@ -4737,7 +4737,7 @@ function App() {
 
       {activeView !== 'admin' ? (
         <footer className="footer">
-          Desarrollado por <a href="#">RRAD.dev 2026</a> - Todos los derechos reservados
+          Desarrollado por <a href="https://www.rrad.dev/" target="_blank" rel="noopener noreferrer">RRAD.dev</a> 2026 · Todos los derechos reservados
         </footer>
       ) : null}
     </div>
