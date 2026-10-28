@@ -1,3 +1,4 @@
+import { ButtonIcon } from './ButtonIcon'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from 'react'
 import {
@@ -3019,39 +3020,19 @@ function App() {
 
   return (
     <div className={`app-shell${navOpen ? ' nav-open' : ''}${activeView === 'registro' ? ' registro-shell' : ''}`}>
-      <button className="nav-toggle" onClick={() => setNavOpen((current) => !current)} type="button" aria-expanded={navOpen} aria-label="Abrir o cerrar menu">
-        Menu
-      </button>
+      <button className="nav-toggle" onClick={() => setNavOpen((current) => !current)} type="button" aria-expanded={navOpen} aria-label="Abrir o cerrar menu" data-custom-icon="true"><ButtonIcon name="menu" /></button>
       <div className={`nav-backdrop${navOpen ? ' visible' : ''}`} onClick={() => setNavOpen(false)} />
 
       <nav className={`topnav${navOpen ? ' open' : ''}`}>
-        <button className="nav-close" onClick={() => setNavOpen(false)} type="button" aria-label="Cerrar menu">
-          Cerrar
-        </button>
+        <button className="nav-close" onClick={() => setNavOpen(false)} type="button" aria-label="Cerrar menu" data-custom-icon="true"><ButtonIcon name="cerrar" /></button>
         <div className="topnav-links">
-          <button className={`nav-link-btn${activeView === 'home' ? ' active' : ''}`} onClick={() => openView('home')} type="button">
-            Inicio
-          </button>
-          <button className={`nav-link-btn${activeView === 'registro' ? ' active' : ''}`} onClick={() => openView('registro')} type="button">
-            Registro al momento/Verificador
-          </button>
-          <button className={`nav-link-btn${activeView === 'admin' ? ' active' : ''}`} onClick={() => openView('admin')} type="button">
-            Admin
-          </button>
+          <button className={`nav-link-btn${activeView === 'home' ? ' active' : ''}`} onClick={() => openView('home')} type="button" data-custom-icon="true"><ButtonIcon name="inicio" /> Inicio</button>
+          <button className={`nav-link-btn${activeView === 'registro' ? ' active' : ''}`} onClick={() => openView('registro')} type="button" data-custom-icon="true"><ButtonIcon name="registro" /> Registro al momento/Verificador</button>
+          <button className={`nav-link-btn${activeView === 'admin' ? ' active' : ''}`} onClick={() => openView('admin')} type="button" data-custom-icon="true"><ButtonIcon name="admin" /> Admin</button>
         </div>
         <div className="topnav-social" aria-label="Redes sociales">
-          <a className="social-btn social-facebook" href={FACEBOOK_PROFILE_URL} onClick={() => setNavOpen(false)} rel="noopener noreferrer" target="_blank">
-            <svg className="social-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path d="M15.1 8.4h2.2V4.7c-.4-.1-1.7-.2-3.2-.2-3.2 0-5.4 1.9-5.4 5.4v3H5.3V17h3.4v7h4.2v-7h3.4l.5-4.1h-3.9v-2.6c0-1.2.3-1.9 2.2-1.9Z" />
-            </svg>
-            Facebook
-          </a>
-          <a className="social-btn social-whatsapp" href={WHATSAPP_DESTINATION_URL} onClick={() => setNavOpen(false)} rel="noopener noreferrer" target="_blank">
-            <svg className="social-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path d="M12.1 2a9.8 9.8 0 0 0-8.4 14.9L2.5 22l5.3-1.2A9.9 9.9 0 1 0 12.1 2Zm0 2a7.9 7.9 0 1 1-3.9 14.8l-.4-.2-3 .7.7-2.9-.3-.5A7.8 7.8 0 0 1 12.1 4Zm-3.4 4.2c-.2 0-.5.1-.7.4-.2.3-.9.9-.9 2.1 0 1.3.9 2.5 1 2.7.1.2 1.8 2.8 4.4 3.8 2.2.9 2.7.7 3.2.6.5-.1 1.6-.7 1.8-1.3.2-.6.2-1.1.2-1.2-.1-.1-.2-.2-.5-.4l-1.7-.8c-.3-.1-.5-.1-.7.2l-.7.9c-.2.2-.4.2-.7.1-1-.4-1.9-.9-2.6-1.7-.6-.7-.9-1.2-1.1-1.6-.1-.3 0-.4.1-.6l.4-.5c.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5l-.8-1.8c-.2-.5-.4-.5-.6-.5h-.4Z" />
-            </svg>
-            WhatsApp
-          </a>
+          <a className="social-btn social-facebook" href={FACEBOOK_PROFILE_URL} onClick={() => setNavOpen(false)} rel="noopener noreferrer" target="_blank" data-custom-icon="true"><ButtonIcon name="facebook" /> Facebook</a>
+          <a className="social-btn social-whatsapp" href={WHATSAPP_DESTINATION_URL} onClick={() => setNavOpen(false)} rel="noopener noreferrer" target="_blank" data-custom-icon="true"><ButtonIcon name="whatsapp" /> WhatsApp</a>
         </div>
       </nav>
 
@@ -3259,20 +3240,12 @@ function App() {
               </div>
 
               <div className="actions">
-                <button className="btn btn-clear" id="clear-btn" onClick={limpiar} type="button" disabled={!registrosAbiertos}>
-                  Limpiar
-                </button>
-                <button className="btn btn-add" id="add-btn" onClick={agregarQuiniela} type="button" disabled={!puedeAgregar}>
-                  Agregar quiniela
-                </button>
-                <button className="btn btn-random" id="random-btn" onClick={aleatorio} type="button" disabled={!registrosAbiertos}>
-                  Aleatorio
-                </button>
+                <button className="btn btn-clear" id="clear-btn" onClick={limpiar} type="button" disabled={!registrosAbiertos} data-custom-icon="true"><ButtonIcon name="limpiar" /> Limpiar</button>
+                <button className="btn btn-add" id="add-btn" onClick={agregarQuiniela} type="button" disabled={!puedeAgregar} data-custom-icon="true"><ButtonIcon name="agregar" /> Agregar quiniela</button>
+                <button className="btn btn-random" id="random-btn" onClick={aleatorio} type="button" disabled={!registrosAbiertos} data-custom-icon="true"><ButtonIcon name="aleatorio" /> Aleatorio</button>
               </div>
 
-              <button className={`btn-send${!registrosAbiertos ? ' blocked' : ''}`} id="send-btn" onClick={sendWhatsApp} type="button" disabled={sending || !registrosAbiertos}>
-                {sending ? 'Registrando quinielas...' : registrosAbiertos ? 'Enviar por WhatsApp' : 'Jornada bloqueada'}
-              </button>
+              <button className={`btn-send${!registrosAbiertos ? ' blocked' : ''}`} id="send-btn" onClick={sendWhatsApp} type="button" disabled={sending || !registrosAbiertos} data-custom-icon="true"><ButtonIcon name="whatsapp" /> {sending ? 'Registrando quinielas...' : registrosAbiertos ? 'Enviar por WhatsApp' : 'Jornada bloqueada'}</button>
 
               <div className="quinielas-list">
                 {visibleQuinielas.length === 0 ? (
@@ -3298,9 +3271,7 @@ function App() {
                         ))}
                       </div>
                       <div className="qi-cost">${quiniela.costo}</div>
-                      <button className="qi-del" onClick={() => removeQuiniela(quiniela.id)} type="button">
-                        X
-                      </button>
+                      <button className="qi-del" onClick={() => removeQuiniela(quiniela.id)} type="button" data-custom-icon="true" aria-label="Eliminar quiniela"><ButtonIcon name="eliminar" /></button>
                     </div>
                   ))}
                 </div>
@@ -3318,7 +3289,7 @@ function App() {
               <input autoComplete="off" className="input-field" maxLength={40} placeholder="Folio, por ejemplo Q1-000001" value={lookupFolio} onChange={(event) => { setLookupFolio(event.target.value); clearLookupState() }} />
               <input autoComplete="tel" className="input-field" inputMode="tel" maxLength={10} placeholder="Celular completo" value={lookupPhone} onChange={(event) => { setLookupPhone(normalizePhone(event.target.value)); clearLookupState() }} />
               <input autoComplete="name" className="input-field" maxLength={100} placeholder="Nombre registrado" value={lookupName} onChange={(event) => { setLookupName(event.target.value); clearLookupState() }} />
-              <button className="registro-back" onClick={handleLookup} type="button">Consultar</button>
+              <button className="registro-back" onClick={handleLookup} type="button" data-custom-icon="true"><ButtonIcon name="buscar" /> Consultar</button>
             </div>
             {lookupMessage ? <div className="app-notice error">{lookupMessage}</div> : null}
             {lookupHasSearched && lookupResults.length > 0 ? (
@@ -3353,9 +3324,7 @@ function App() {
                 <p>Vista tipo tabla para revisar cada captura sin salir del diseño principal.</p>
               </div>
               <div className="registro-actions">
-                <button className="registro-export" disabled={registroRankingRows.length === 0} onClick={exportRegistroPdf} type="button">
-                  Exportar PDF
-                </button>
+                <button className="registro-export" disabled={registroRankingRows.length === 0} onClick={exportRegistroPdf} type="button" data-custom-icon="true"><ButtonIcon name="descargar-pdf" /> Exportar PDF</button>
               </div>
             </div>
 
@@ -3392,23 +3361,15 @@ function App() {
                   <div className="admin-pill">Admin</div>
                 </div>
                 <div className="topbar-tabs">
-                  <button className={`tab-btn${adminTab === 'quinielas' ? ' active' : ''}`} onClick={() => setAdminTab('quinielas')} type="button">
-                    📋 Quinielas
-                  </button>
-                  <button className={`tab-btn${adminTab === 'create' ? ' active' : ''}`} onClick={() => setAdminTab('create')} type="button">
-                    ➕ Administrar partidos
-                  </button>
-                  <button className={`tab-btn${adminTab === 'jornadas' ? ' active' : ''}`} onClick={() => setAdminTab('jornadas')} type="button">
-                    Jornadas
-                  </button>
+                  <button className={`tab-btn${adminTab === 'quinielas' ? ' active' : ''}`} onClick={() => setAdminTab('quinielas')} type="button" data-custom-icon="true"><ButtonIcon name="registro" /> Quinielas</button>
+                  <button className={`tab-btn${adminTab === 'create' ? ' active' : ''}`} onClick={() => setAdminTab('create')} type="button" data-custom-icon="true"><ButtonIcon name="admin" /> Administrar partidos</button>
+                  <button className={`tab-btn${adminTab === 'jornadas' ? ' active' : ''}`} onClick={() => setAdminTab('jornadas')} type="button" data-custom-icon="true"><ButtonIcon name="registro" /> Jornadas</button>
                 </div>
                 <div className="topbar-right">
                   <div className="admin-user">
                     Sesión: <strong>{adminEmail || '—'}</strong>
                   </div>
-                  <button className="logout-btn" onClick={handleAdminLogout} type="button">
-                    🚪 Salir
-                  </button>
+                  <button className="logout-btn" onClick={handleAdminLogout} type="button" data-custom-icon="true"><ButtonIcon name="salir" /> Salir</button>
                 </div>
               </header>
 
@@ -3451,8 +3412,8 @@ function App() {
                         <h2>📋 Quinielas registradas</h2>
                         <div className="section-head-actions">
                           <span className="badge-count">{filteredAdminQuinielas.length} registro{filteredAdminQuinielas.length !== 1 ? 's' : ''}</span>
-                          <button className="act-btn save" onClick={openNewAdminQuiniela} type="button">Agregar Quiniela</button>
-                          <button className="act-btn admin-mobile-export" onClick={exportAdminCsv} type="button">Exportar CSV</button>
+                          <button className="act-btn save" onClick={openNewAdminQuiniela} type="button" data-custom-icon="true"><ButtonIcon name="agregar" /> Agregar Quiniela</button>
+                          <button className="act-btn admin-mobile-export" onClick={exportAdminCsv} type="button" data-custom-icon="true"><ButtonIcon name="exportar-csv" /> Exportar CSV</button>
                         </div>
                       </div>
                       <div className="section-body">
@@ -3495,7 +3456,7 @@ function App() {
                             <option value="newest">Más recientes</option>
                             <option value="oldest">Menos recientes</option>
                           </select>
-                          <button className="act-btn admin-filter-export" onClick={exportAdminCsv} type="button">Exportar CSV</button>
+                          <button className="act-btn admin-filter-export" onClick={exportAdminCsv} type="button" data-custom-icon="true"><ButtonIcon name="exportar-csv" /> Exportar CSV</button>
                         </div>
                         {filteredAdminQuinielas.length === 0 ? (
                           <div className="table-empty admin-quiniela-empty">
@@ -3541,15 +3502,11 @@ function App() {
                                     </div>
                                     <div className="admin-q-field">
                                       <span>Pago</span>
-                                      <button className={`admin-q-payment ${paymentStatus}`} onClick={() => handlePaymentChange(quiniela, paymentStatus === 'paid' ? 'pending' : 'paid')} type="button">
-                                        {getPaymentLabel(paymentStatus)}
-                                      </button>
+                                      <button className={`admin-q-payment ${paymentStatus}`} onClick={() => handlePaymentChange(quiniela, paymentStatus === 'paid' ? 'pending' : 'paid')} type="button" data-custom-icon="true"><ButtonIcon name="pagar" /> {getPaymentLabel(paymentStatus)}</button>
                                     </div>
                                     <div className="admin-q-field">
                                       <span>Premio</span>
-                                      <button className="admin-q-prize" onClick={() => handlePrize(quiniela)} type="button">
-                                        ${prizeAmount.toFixed(2)}
-                                      </button>
+                                      <button className="admin-q-prize" onClick={() => handlePrize(quiniela)} type="button" data-custom-icon="true"><ButtonIcon name="premio" /> ${prizeAmount.toFixed(2)}</button>
                                     </div>
                                   </div>
 
@@ -3571,17 +3528,13 @@ function App() {
 
                                   <div className="admin-q-actions">
                                     {quiniela.status !== 'accepted' ? (
-                                      <button className="admin-q-action accept" onClick={() => openConfirm('accept', quiniela.id)} type="button">
-                                        Aceptar
-                                      </button>
+                                      <button className="admin-q-action accept" onClick={() => openConfirm('accept', quiniela.id)} type="button" data-custom-icon="true"><ButtonIcon name="aceptar" /> Aceptar</button>
                                     ) : null}
                                     {quiniela.status !== 'cancelled' ? (
-                                      <button className="admin-q-action reject" onClick={() => openConfirm('cancel', quiniela.id)} type="button">
-                                        Rechazar
-                                      </button>
+                                      <button className="admin-q-action reject" onClick={() => openConfirm('cancel', quiniela.id)} type="button" data-custom-icon="true"><ButtonIcon name="cancelar" /> Rechazar</button>
                                     ) : null}
-                                    <button className="admin-q-action icon-action edit-icon-action" onClick={() => startEditAdminQuiniela(quiniela)} type="button" title="Editar quiniela" aria-label={`Editar quiniela ${folio}`} />
-                                    <button className="admin-q-action delete" onClick={() => openConfirm('delete', quiniela.id)} type="button" title="Eliminar quiniela" aria-label={`Eliminar quiniela ${folio}`} />
+                                    <button className="admin-q-action icon-action edit-icon-action" onClick={() => startEditAdminQuiniela(quiniela)} type="button" title="Editar quiniela" aria-label={`Editar quiniela ${folio}`} data-custom-icon="true"><ButtonIcon name="editar" /></button>
+                                    <button className="admin-q-action delete" onClick={() => openConfirm('delete', quiniela.id)} type="button" title="Eliminar quiniela" aria-label={`Eliminar quiniela ${folio}`} data-custom-icon="true"><ButtonIcon name="eliminar" /></button>
                                   </div>
                                 </article>
                               )
@@ -3654,31 +3607,21 @@ function App() {
                                       </span>
                                     </td>
                                     <td>
-                                      <button className="act-btn" onClick={() => handlePaymentChange(quiniela, quiniela.paymentStatus === 'paid' ? 'pending' : 'paid')} type="button">
-                                        {quiniela.paymentStatus === 'paid' ? 'Pagada' : 'Pendiente'}
-                                      </button>
+                                      <button className="act-btn" onClick={() => handlePaymentChange(quiniela, quiniela.paymentStatus === 'paid' ? 'pending' : 'paid')} type="button" data-custom-icon="true"><ButtonIcon name="pagar" /> {quiniela.paymentStatus === 'paid' ? 'Pagada' : 'Pendiente'}</button>
                                     </td>
                                     <td>
-                                      <button className="act-btn" onClick={() => handlePrize(quiniela)} type="button">
-                                        ${(quiniela.prizeAmount ?? 0).toFixed(2)}
-                                      </button>
+                                      <button className="act-btn" onClick={() => handlePrize(quiniela)} type="button" data-custom-icon="true"><ButtonIcon name="premio" /> ${(quiniela.prizeAmount ?? 0).toFixed(2)}</button>
                                     </td>
                                     <td>
                                       <div className="acts-cell">
                                         {quiniela.status !== 'accepted' ? (
-                                          <button className="act-btn accept" onClick={() => openConfirm('accept', quiniela.id)} type="button">
-                                            ✅ Aceptar
-                                          </button>
+                                          <button className="act-btn accept" onClick={() => openConfirm('accept', quiniela.id)} type="button" data-custom-icon="true"><ButtonIcon name="aceptar" /> Aceptar</button>
                                         ) : null}
                                         {quiniela.status !== 'cancelled' ? (
-                                          <button className="act-btn cancel" onClick={() => openConfirm('cancel', quiniela.id)} type="button">
-                                            ❌ Rechazar
-                                          </button>
+                                          <button className="act-btn cancel" onClick={() => openConfirm('cancel', quiniela.id)} type="button" data-custom-icon="true"><ButtonIcon name="cancelar" /> Rechazar</button>
                                         ) : null}
-                                        <button className="act-btn icon-action edit-icon-action" onClick={() => startEditAdminQuiniela(quiniela)} type="button" title="Editar quiniela" aria-label={`Editar quiniela ${quiniela.folio ?? quiniela.id}`} />
-                                        <button className="act-btn delete" onClick={() => openConfirm('delete', quiniela.id)} type="button">
-                                          🗑
-                                        </button>
+                                        <button className="act-btn icon-action edit-icon-action" onClick={() => startEditAdminQuiniela(quiniela)} type="button" title="Editar quiniela" aria-label={`Editar quiniela ${quiniela.folio ?? quiniela.id}`} data-custom-icon="true"><ButtonIcon name="editar" /></button>
+                                        <button className="act-btn delete" onClick={() => openConfirm('delete', quiniela.id)} type="button" data-custom-icon="true"><ButtonIcon name="eliminar" /></button>
                                       </div>
                                     </td>
                                   </tr>
@@ -3696,8 +3639,8 @@ function App() {
                       <div className="section-head">
                         <h2>➕ Administrar partidos</h2>
                         <div className="section-head-actions">
-                          <button className="ca-btn" onClick={() => setShowLigaMxImportModal(true)} type="button">Cargar Liga MX</button>
-                          <button className="ca-btn save" onClick={() => setShowAddMatchModal(true)} type="button">Agregar partido</button>
+                          <button className="ca-btn" onClick={() => setShowLigaMxImportModal(true)} type="button" data-custom-icon="true"><ButtonIcon name="importar" /> Cargar Liga MX</button>
+                          <button className="ca-btn save" onClick={() => setShowAddMatchModal(true)} type="button" data-custom-icon="true"><ButtonIcon name="agregar" /> Agregar partido</button>
                         </div>
                       </div>
                       <div className="section-body">
@@ -3865,8 +3808,8 @@ function App() {
                                           </select>
                                         </div>
                                         <div className="mcr-actions">
-                                          <button className="act-btn save" onClick={() => saveEditMatch(match.id)} type="button">Guardar</button>
-                                          <button className="act-btn cancel" onClick={cancelEditMatch} type="button">Cancelar</button>
+                                          <button className="act-btn save" onClick={() => saveEditMatch(match.id)} type="button" data-custom-icon="true"><ButtonIcon name="guardar" /> Guardar</button>
+                                          <button className="act-btn cancel" onClick={cancelEditMatch} type="button" data-custom-icon="true"><ButtonIcon name="cancelar" /> Cancelar</button>
                                         </div>
                                       </div>
                                     ) : (
@@ -3884,8 +3827,8 @@ function App() {
                                         </div>
                                         <div className={`mcr-time ${match.timeClass === 'dom' ? 'dom' : 'sab'}`}>{formatMatchTime(match.time)}</div>
                                         <div className="mcr-actions">
-                                          <button className="act-btn icon-action edit-icon-action match-icon-btn" onClick={() => startEditMatch(match)} type="button" title="Editar partido" aria-label={`Editar partido ${match.local} vs ${match.visitante}`}>Editar</button>
-                                          <button className="act-btn delete match-icon-btn match-delete-icon" onClick={() => deleteMatch(match.id)} type="button" title="Eliminar partido" aria-label={`Eliminar partido ${match.local} vs ${match.visitante}`}>Eliminar</button>
+                                          <button className="act-btn icon-action edit-icon-action match-icon-btn" onClick={() => startEditMatch(match)} type="button" title="Editar partido" aria-label={`Editar partido ${match.local} vs ${match.visitante}`} data-custom-icon="true"><ButtonIcon name="editar" /> Editar</button>
+                                          <button className="act-btn delete match-icon-btn match-delete-icon" onClick={() => deleteMatch(match.id)} type="button" title="Eliminar partido" aria-label={`Eliminar partido ${match.local} vs ${match.visitante}`} data-custom-icon="true"><ButtonIcon name="eliminar" /> Eliminar</button>
                                         </div>
                                       </>
                                     )}
@@ -3929,12 +3872,8 @@ function App() {
                                   </div>
                                 </div>
                                 <div className="liga-import-actions">
-                                  <button className="ca-btn" onClick={fetchLigaMxMatches} type="button" disabled={loadingLigaMxMatches}>
-                                    {loadingLigaMxMatches ? 'Cargando...' : 'Cargar temporada'}
-                                  </button>
-                                  <button className="ca-btn save" onClick={saveLigaMxImportMatches} type="button" disabled={savingLigaMxMatches || ligaMxImportMatches.length === 0}>
-                                    {savingLigaMxMatches ? 'Guardando...' : 'Guardar en jornada'}
-                                  </button>
+                                  <button className="ca-btn" onClick={fetchLigaMxMatches} type="button" disabled={loadingLigaMxMatches} data-custom-icon="true"><ButtonIcon name="importar" /> {loadingLigaMxMatches ? 'Cargando...' : 'Cargar temporada'}</button>
+                                  <button className="ca-btn save" onClick={saveLigaMxImportMatches} type="button" disabled={savingLigaMxMatches || ligaMxImportMatches.length === 0} data-custom-icon="true"><ButtonIcon name="importar" /> {savingLigaMxMatches ? 'Guardando...' : 'Guardar en jornada'}</button>
                                 </div>
                                 {ligaMxImportMessage ? <div className="liga-import-message">{ligaMxImportMessage}</div> : null}
                                 {ligaMxImportMatches.length > 0 ? (
@@ -4011,7 +3950,7 @@ function App() {
                                 <input className="rp-input" type="time" value={newMatchTime} onChange={(e) => setNewMatchTime(e.target.value)} />
                               </div>
                               <div style={{ marginTop: 8 }}>
-                                <button className="ca-btn save" onClick={addMatch} type="button">Agregar partido</button>
+                                <button className="ca-btn save" onClick={addMatch} type="button" data-custom-icon="true"><ButtonIcon name="agregar" /> Agregar partido</button>
                               </div>
                             </div>
                             
@@ -4027,8 +3966,8 @@ function App() {
                       <div className="section-head">
                         <h2>Jornadas, cierre y premios</h2>
                         <div className="section-head-actions">
-                          <button className="ca-btn save" onClick={() => setShowTournamentModal(true)} type="button">Agregar Torneo</button>
-                          <button className="ca-btn save" onClick={() => setShowJornadaModal(true)} type="button">Agregar Jornada</button>
+                          <button className="ca-btn save" onClick={() => setShowTournamentModal(true)} type="button" data-custom-icon="true"><ButtonIcon name="agregar" /> Agregar Torneo</button>
+                          <button className="ca-btn save" onClick={() => setShowJornadaModal(true)} type="button" data-custom-icon="true"><ButtonIcon name="agregar" /> Agregar Jornada</button>
                         </div>
                       </div>
                       <div className="section-body">
@@ -4045,10 +3984,10 @@ function App() {
                                 </div>
                                 <div className="acts-cell">
                                   <span className={`status-badge ${item.status}`}>{item.status}</span>
-                                  <button className="act-btn" onClick={() => startEditTournament(item)} type="button">Editar</button>
-                                  {item.status !== 'active' ? <button className="act-btn" onClick={() => handleTournamentStatus(item, 'active')} type="button">Activar</button> : null}
-                                  {item.status !== 'finished' ? <button className="act-btn accept" onClick={() => handleTournamentStatus(item, 'finished')} type="button">Finalizar</button> : null}
-                                  <button className="act-btn delete" onClick={() => deleteTournament(item)} type="button">Eliminar</button>
+                                  <button className="act-btn" onClick={() => startEditTournament(item)} type="button" data-custom-icon="true"><ButtonIcon name="editar" /> Editar</button>
+                                  {item.status !== 'active' ? <button className="act-btn" onClick={() => handleTournamentStatus(item, 'active')} type="button" data-custom-icon="true"><ButtonIcon name="abrir" /> Activar</button> : null}
+                                  {item.status !== 'finished' ? <button className="act-btn accept" onClick={() => handleTournamentStatus(item, 'finished')} type="button" data-custom-icon="true"><ButtonIcon name="finalizar" /> Finalizar</button> : null}
+                                  <button className="act-btn delete" onClick={() => deleteTournament(item)} type="button" data-custom-icon="true"><ButtonIcon name="eliminar" /> Eliminar</button>
                                 </div>
                               </div>
                             ))}
@@ -4071,29 +4010,23 @@ function App() {
                                   className="act-btn download"
                                   disabled={exportingJornadaId !== null}
                                   onClick={() => void exportJornadaQuinielasPdf(item)}
-                                  type="button"
-                                >
-                                  {exportingJornadaId === item.id ? 'Generando PDF...' : 'Descargar PDF'}
-                                </button>
-                                <button className="act-btn" onClick={() => startEditJornada(item)} type="button">Editar</button>
+                                  type="button" data-custom-icon="true"><ButtonIcon name="descargar-pdf" /> {exportingJornadaId === item.id ? 'Generando PDF...' : 'Descargar PDF'}</button>
+                                <button className="act-btn" onClick={() => startEditJornada(item)} type="button" data-custom-icon="true"><ButtonIcon name="editar" /> Editar</button>
                                 {item.status === 'draft' ? (
-                                  <button className="act-btn publish" onClick={() => handleJornadaStatus(item, 'open')} type="button">Publicar</button>
+                                  <button className="act-btn publish" onClick={() => handleJornadaStatus(item, 'open')} type="button" data-custom-icon="true"><ButtonIcon name="publicar" /> Publicar</button>
                                 ) : null}
                                 {item.status !== 'draft' && item.status !== 'open' ? (
-                                  <button className="act-btn" onClick={() => handleJornadaStatus(item, 'open')} type="button">Abrir</button>
+                                  <button className="act-btn" onClick={() => handleJornadaStatus(item, 'open')} type="button" data-custom-icon="true"><ButtonIcon name="abrir" /> Abrir</button>
                                 ) : null}
-                                <button className="act-btn cancel" onClick={() => handleJornadaStatus(item, 'closed')} type="button">Cerrar</button>
-                                <button className="act-btn" onClick={() => handleDistributePrizes(item)} type="button">Repartir premios</button>
-                                <button className="act-btn accept" onClick={() => handleJornadaStatus(item, 'finished')} type="button">Finalizar</button>
+                                <button className="act-btn cancel" onClick={() => handleJornadaStatus(item, 'closed')} type="button" data-custom-icon="true"><ButtonIcon name="bloquear" /> Cerrar</button>
+                                <button className="act-btn" onClick={() => handleDistributePrizes(item)} type="button" data-custom-icon="true"><ButtonIcon name="premio" /> Repartir premios</button>
+                                <button className="act-btn accept" onClick={() => handleJornadaStatus(item, 'finished')} type="button" data-custom-icon="true"><ButtonIcon name="finalizar" /> Finalizar</button>
                                 <button
                                   className="act-btn delete"
                                   disabled={quinielas.some((quiniela) => quiniela.jornadaId === item.id)}
                                   onClick={() => deleteJornada(item)}
                                   title={quinielas.some((quiniela) => quiniela.jornadaId === item.id) ? 'No se puede eliminar una jornada con quinielas registradas.' : 'Eliminar jornada'}
-                                  type="button"
-                                >
-                                  Eliminar
-                                </button>
+                                  type="button" data-custom-icon="true"><ButtonIcon name="eliminar" /> Eliminar</button>
                               </div>
                             </article>
                           ))}
@@ -4143,9 +4076,7 @@ function App() {
                     }}
                   />
                 </div>
-                <button className="login-btn" onClick={handleAdminLogin} type="button">
-                  Entrar al panel
-                </button>
+                <button className="login-btn" onClick={handleAdminLogin} type="button" data-custom-icon="true"><ButtonIcon name="entrar" /> Entrar al panel</button>
                 <div className="login-footer">⚡ Desarrollado por RRAD 2026</div>
               </div>
             </div>
@@ -4160,7 +4091,7 @@ function App() {
                       <h3>Agregar Torneo</h3>
                       <p>Crea el contenedor principal para agrupar jornadas.</p>
                     </div>
-                    <button className="modal-close-btn" onClick={closeTournamentModal} type="button" aria-label="Cerrar modal">×</button>
+                    <button className="modal-close-btn" onClick={closeTournamentModal} type="button" aria-label="Cerrar modal" data-custom-icon="true"><ButtonIcon name="cerrar" /></button>
                   </div>
                   <div className="modal-form-grid">
                     <label className="jornada-field">
@@ -4177,8 +4108,8 @@ function App() {
                     </label>
                   </div>
                   <div className="admin-quiniela-actions">
-                    <button className="act-btn cancel" onClick={closeTournamentModal} type="button">Cancelar</button>
-                    <button className="act-btn save" onClick={handleCreateTournament} type="button">Crear torneo</button>
+                    <button className="act-btn cancel" onClick={closeTournamentModal} type="button" data-custom-icon="true"><ButtonIcon name="cancelar" /> Cancelar</button>
+                    <button className="act-btn save" onClick={handleCreateTournament} type="button" data-custom-icon="true"><ButtonIcon name="agregar" /> Crear torneo</button>
                   </div>
                 </div>
               </div>
@@ -4194,7 +4125,7 @@ function App() {
                       <h3>Editar Torneo</h3>
                       <p>Actualiza los datos generales y el estado del torneo.</p>
                     </div>
-                    <button className="modal-close-btn" onClick={closeEditTournamentModal} type="button" aria-label="Cerrar modal">×</button>
+                    <button className="modal-close-btn" onClick={closeEditTournamentModal} type="button" aria-label="Cerrar modal" data-custom-icon="true"><ButtonIcon name="cerrar" /></button>
                   </div>
                   <div className="modal-form-grid">
                     <label className="jornada-field">
@@ -4219,8 +4150,8 @@ function App() {
                     </label>
                   </div>
                   <div className="admin-quiniela-actions">
-                    <button className="act-btn cancel" onClick={closeEditTournamentModal} type="button">Cancelar</button>
-                    <button className="act-btn save" onClick={saveEditTournament} type="button">Guardar cambios</button>
+                    <button className="act-btn cancel" onClick={closeEditTournamentModal} type="button" data-custom-icon="true"><ButtonIcon name="cancelar" /> Cancelar</button>
+                    <button className="act-btn save" onClick={saveEditTournament} type="button" data-custom-icon="true"><ButtonIcon name="guardar" /> Guardar cambios</button>
                   </div>
                 </div>
               </div>
@@ -4236,7 +4167,7 @@ function App() {
                       <h3>Agregar Jornada</h3>
                       <p>Configura apertura, cierre y premios para esta jornada.</p>
                     </div>
-                    <button className="modal-close-btn" onClick={closeJornadaModal} type="button" aria-label="Cerrar modal">×</button>
+                    <button className="modal-close-btn" onClick={closeJornadaModal} type="button" aria-label="Cerrar modal" data-custom-icon="true"><ButtonIcon name="cerrar" /></button>
                   </div>
                   <div className="modal-form-grid jornada-modal-grid">
                     <label className="jornada-field">
@@ -4274,8 +4205,8 @@ function App() {
                     </label>
                   </div>
                   <div className="admin-quiniela-actions">
-                    <button className="act-btn cancel" onClick={closeJornadaModal} type="button">Cancelar</button>
-                    <button className="act-btn save" onClick={handleCreateJornada} type="button">Crear jornada</button>
+                    <button className="act-btn cancel" onClick={closeJornadaModal} type="button" data-custom-icon="true"><ButtonIcon name="cancelar" /> Cancelar</button>
+                    <button className="act-btn save" onClick={handleCreateJornada} type="button" data-custom-icon="true"><ButtonIcon name="agregar" /> Crear jornada</button>
                   </div>
                 </div>
               </div>
@@ -4291,7 +4222,7 @@ function App() {
                       <h3>Editar Jornada</h3>
                       <p>Modifica torneo, fechas, premios y notas de la jornada.</p>
                     </div>
-                    <button className="modal-close-btn" onClick={cancelEditJornada} type="button" aria-label="Cerrar modal">×</button>
+                    <button className="modal-close-btn" onClick={cancelEditJornada} type="button" aria-label="Cerrar modal" data-custom-icon="true"><ButtonIcon name="cerrar" /></button>
                   </div>
                   <div className="modal-form-grid jornada-modal-grid">
                     <label className="jornada-field">
@@ -4350,11 +4281,11 @@ function App() {
                     </div>
                   </div>
                   <div className="admin-quiniela-actions">
-                    <button className="act-btn cancel" onClick={cancelEditJornada} type="button">Cancelar</button>
+                    <button className="act-btn cancel" onClick={cancelEditJornada} type="button" data-custom-icon="true"><ButtonIcon name="cancelar" /> Cancelar</button>
                     {jornadas.find((item) => item.id === editingJornadaId)?.status === 'draft' ? (
-                      <button className="act-btn publish" onClick={publishEditJornada} type="button">Publicar</button>
+                      <button className="act-btn publish" onClick={publishEditJornada} type="button" data-custom-icon="true"><ButtonIcon name="publicar" /> Publicar</button>
                     ) : null}
-                    <button className="act-btn save" onClick={saveEditJornada} type="button">Guardar cambios</button>
+                    <button className="act-btn save" onClick={saveEditJornada} type="button" data-custom-icon="true"><ButtonIcon name="guardar" /> Guardar cambios</button>
                   </div>
                 </div>
               </div>
@@ -4370,7 +4301,7 @@ function App() {
                       <h3>Cargar Liga MX</h3>
                       <p>Importa partidos desde TheSportsDB y guardalos en la jornada seleccionada.</p>
                     </div>
-                    <button className="modal-close-btn" onClick={() => setShowLigaMxImportModal(false)} type="button" aria-label="Cerrar modal">×</button>
+                    <button className="modal-close-btn" onClick={() => setShowLigaMxImportModal(false)} type="button" aria-label="Cerrar modal" data-custom-icon="true"><ButtonIcon name="cerrar" /></button>
                   </div>
                   <div className="modal-form-grid jornada-modal-grid">
                     <label className="jornada-field">
@@ -4392,12 +4323,8 @@ function App() {
                     </label>
                   </div>
                   <div className="liga-import-actions modal-import-actions">
-                    <button className="ca-btn" onClick={fetchLigaMxMatches} type="button" disabled={loadingLigaMxMatches}>
-                      {loadingLigaMxMatches ? 'Cargando...' : 'Cargar temporada'}
-                    </button>
-                    <button className="ca-btn save" onClick={saveLigaMxImportMatches} type="button" disabled={savingLigaMxMatches || ligaMxImportMatches.length === 0}>
-                      {savingLigaMxMatches ? 'Guardando...' : 'Guardar en jornada'}
-                    </button>
+                    <button className="ca-btn" onClick={fetchLigaMxMatches} type="button" disabled={loadingLigaMxMatches} data-custom-icon="true"><ButtonIcon name="importar" /> {loadingLigaMxMatches ? 'Cargando...' : 'Cargar temporada'}</button>
+                    <button className="ca-btn save" onClick={saveLigaMxImportMatches} type="button" disabled={savingLigaMxMatches || ligaMxImportMatches.length === 0} data-custom-icon="true"><ButtonIcon name="importar" /> {savingLigaMxMatches ? 'Guardando...' : 'Guardar en jornada'}</button>
                   </div>
                   {ligaMxImportMessage ? <div className="liga-import-message">{ligaMxImportMessage}</div> : null}
                   {ligaMxImportMatches.length > 0 ? (
@@ -4424,7 +4351,7 @@ function App() {
                       <h3>Agregar Partido</h3>
                       <p>Captura equipos, fecha y hora para la jornada seleccionada.</p>
                     </div>
-                    <button className="modal-close-btn" onClick={() => setShowAddMatchModal(false)} type="button" aria-label="Cerrar modal">×</button>
+                    <button className="modal-close-btn" onClick={() => setShowAddMatchModal(false)} type="button" aria-label="Cerrar modal" data-custom-icon="true"><ButtonIcon name="cerrar" /></button>
                   </div>
                   <div className="match-add-head">
                     {renderTeamCatalogToggle()}
@@ -4471,8 +4398,8 @@ function App() {
                     </label>
                   </div>
                   <div className="admin-quiniela-actions">
-                    <button className="act-btn cancel" onClick={() => setShowAddMatchModal(false)} type="button">Cancelar</button>
-                    <button className="act-btn save" onClick={addMatch} type="button">Agregar partido</button>
+                    <button className="act-btn cancel" onClick={() => setShowAddMatchModal(false)} type="button" data-custom-icon="true"><ButtonIcon name="cancelar" /> Cancelar</button>
+                    <button className="act-btn save" onClick={addMatch} type="button" data-custom-icon="true"><ButtonIcon name="agregar" /> Agregar partido</button>
                   </div>
                 </div>
               </div>
@@ -4488,7 +4415,7 @@ function App() {
                       <h3>Editar Partido</h3>
                       <p>Actualiza equipos, marcador, fecha, hora y jornada.</p>
                     </div>
-                    <button className="modal-close-btn" onClick={cancelEditMatch} type="button" aria-label="Cerrar modal">×</button>
+                    <button className="modal-close-btn" onClick={cancelEditMatch} type="button" aria-label="Cerrar modal" data-custom-icon="true"><ButtonIcon name="cerrar" /></button>
                   </div>
                   <div className="match-add-head">
                     {renderTeamCatalogToggle()}
@@ -4543,8 +4470,8 @@ function App() {
                     </label>
                   </div>
                   <div className="admin-quiniela-actions">
-                    <button className="act-btn cancel" onClick={cancelEditMatch} type="button">Cancelar</button>
-                    <button className="act-btn save" onClick={() => saveEditMatch(editingMatchId)} type="button">Guardar cambios</button>
+                    <button className="act-btn cancel" onClick={cancelEditMatch} type="button" data-custom-icon="true"><ButtonIcon name="cancelar" /> Cancelar</button>
+                    <button className="act-btn save" onClick={() => saveEditMatch(editingMatchId)} type="button" data-custom-icon="true"><ButtonIcon name="guardar" /> Guardar cambios</button>
                   </div>
                 </div>
               </div>
@@ -4560,7 +4487,7 @@ function App() {
                       <h3>{adminEditQuinielaId ? 'Editar quiniela' : 'Agregar Quiniela'}</h3>
                       <p>{adminEditQuinielaId ? `Modificando quiniela #${adminEditQuinielaId}` : 'Crea una quiniela aceptada desde el panel de admin.'}</p>
                     </div>
-                    <button className="modal-close-btn" onClick={closeAdminQuinielaModal} type="button" aria-label="Cerrar modal">×</button>
+                    <button className="modal-close-btn" onClick={closeAdminQuinielaModal} type="button" aria-label="Cerrar modal" data-custom-icon="true"><ButtonIcon name="cerrar" /></button>
                   </div>
                   <div className="admin-quiniela-grid">
                     <div className="admin-quiniela-field">
@@ -4629,23 +4556,13 @@ function App() {
                       className="act-btn save admin-modal-confirm"
                       disabled={savingAdminQuiniela || !adminQuinielaCompleta || !adminQuinielaNombreValido || !adminQuinielaCelularValido || adminQuinielaDobles !== adminQuinielaMaxDobles}
                       onClick={saveAdminQuiniela}
-                      type="button"
-                    >
-                      <span className="admin-modal-action-icon">✓</span>
-                      <span>{savingAdminQuiniela ? 'Guardando...' : adminEditQuinielaId ? 'Guardar cambios' : 'Crear quiniela'}</span>
-                    </button>
-                    <button className="act-btn cancel admin-modal-reject" onClick={closeAdminQuinielaModal} type="button">
-                      <span className="admin-modal-action-icon">×</span>
+                      type="button" data-custom-icon="true"><ButtonIcon name="guardar" /> <span>{savingAdminQuiniela ? 'Guardando...' : adminEditQuinielaId ? 'Guardar cambios' : 'Crear quiniela'}</span></button>
+                    <button className="act-btn cancel admin-modal-reject" onClick={closeAdminQuinielaModal} type="button" data-custom-icon="true">
+                      <ButtonIcon name="cancelar" />
                       <span>Cancelar</span>
                     </button>
-                    <button className="act-btn admin-modal-icon admin-modal-random" onClick={randomAdminQuiniela} type="button" title="Aleatorio" aria-label="Aleatorio">
-                      <span className="admin-modal-action-icon">✎</span>
-                      <span>Aleatorio</span>
-                    </button>
-                    <button className="act-btn delete admin-modal-icon admin-modal-clear" onClick={clearAdminQuinielaForm} type="button" title="Limpiar" aria-label="Limpiar">
-                      <span className="admin-modal-action-icon">🗑</span>
-                      <span>Limpiar</span>
-                    </button>
+                    <button className="act-btn admin-modal-icon admin-modal-random" onClick={randomAdminQuiniela} type="button" title="Aleatorio" aria-label="Aleatorio" data-custom-icon="true"><ButtonIcon name="aleatorio" /> <span>Aleatorio</span></button>
+                    <button className="act-btn delete admin-modal-icon admin-modal-clear" onClick={clearAdminQuinielaForm} type="button" title="Limpiar" aria-label="Limpiar" data-custom-icon="true"><ButtonIcon name="limpiar" /> <span>Limpiar</span></button>
                   </div>
                 </div>
               </div>
@@ -4663,7 +4580,7 @@ function App() {
                       <h3>Referencia de Pago</h3>
                       <p>{paymentModalQuiniela.folio ?? `#${paymentModalQuiniela.id}`} · {paymentModalQuiniela.nombre}</p>
                     </div>
-                    <button className="modal-close-btn" onClick={closePaymentModal} type="button" aria-label="Cerrar modal">×</button>
+                    <button className="modal-close-btn" onClick={closePaymentModal} type="button" aria-label="Cerrar modal" data-custom-icon="true"><ButtonIcon name="cerrar" /></button>
                   </div>
                   <div className="modal-form-grid">
                     <label className="jornada-field modal-field-full">
@@ -4684,8 +4601,8 @@ function App() {
                     </label>
                   </div>
                   <div className="admin-quiniela-actions">
-                    <button className="act-btn cancel" onClick={closePaymentModal} type="button">Cancelar</button>
-                    <button className="act-btn save" onClick={savePaymentReference} type="button">Guardar referencia</button>
+                    <button className="act-btn cancel" onClick={closePaymentModal} type="button" data-custom-icon="true"><ButtonIcon name="cancelar" /> Cancelar</button>
+                    <button className="act-btn save" onClick={savePaymentReference} type="button" data-custom-icon="true"><ButtonIcon name="guardar" /> Guardar referencia</button>
                   </div>
                 </div>
               </div>
@@ -4701,7 +4618,7 @@ function App() {
                       <h3>Monto del Premio</h3>
                       <p>{prizeModalQuiniela.folio ?? `#${prizeModalQuiniela.id}`} · {prizeModalQuiniela.nombre}</p>
                     </div>
-                    <button className="modal-close-btn" onClick={closePrizeModal} type="button" aria-label="Cerrar modal">×</button>
+                    <button className="modal-close-btn" onClick={closePrizeModal} type="button" aria-label="Cerrar modal" data-custom-icon="true"><ButtonIcon name="cerrar" /></button>
                   </div>
                   <div className="modal-form-grid">
                     <label className="jornada-field modal-field-full">
@@ -4723,8 +4640,8 @@ function App() {
                     </label>
                   </div>
                   <div className="admin-quiniela-actions">
-                    <button className="act-btn cancel" onClick={closePrizeModal} type="button">Cancelar</button>
-                    <button className="act-btn save" onClick={savePrizeAmount} type="button">Guardar monto</button>
+                    <button className="act-btn cancel" onClick={closePrizeModal} type="button" data-custom-icon="true"><ButtonIcon name="cancelar" /> Cancelar</button>
+                    <button className="act-btn save" onClick={savePrizeAmount} type="button" data-custom-icon="true"><ButtonIcon name="guardar" /> Guardar monto</button>
                   </div>
                 </div>
               </div>
@@ -4749,12 +4666,8 @@ function App() {
                   )}
                 </div>
                 <div className="modal-actions">
-                  <button className="modal-btn" onClick={closeAdminDeleteConfirm} type="button">
-                    Cancelar
-                  </button>
-                  <button className="modal-btn confirm-cancel" onClick={runAdminDeleteConfirm} type="button">
-                    Eliminar
-                  </button>
+                  <button className="modal-btn" onClick={closeAdminDeleteConfirm} type="button" data-custom-icon="true"><ButtonIcon name="cancelar" /> Cancelar</button>
+                  <button className="modal-btn confirm-cancel" onClick={runAdminDeleteConfirm} type="button" data-custom-icon="true"><ButtonIcon name="eliminar" /> Eliminar</button>
                 </div>
               </div>
             </div>
@@ -4777,12 +4690,8 @@ function App() {
                   )}
                 </div>
                 <div className="modal-actions">
-                  <button className="modal-btn" onClick={closeConfirm} type="button">
-                    Cancelar
-                  </button>
-                  <button className={`modal-btn ${confirmAction.type === 'accept' ? 'confirm-accept' : 'confirm-cancel'}`} onClick={runConfirmAction} type="button">
-                    {confirmAction.type === 'accept' ? 'Aceptar' : confirmAction.type === 'cancel' ? 'Rechazar' : 'Eliminar'}
-                  </button>
+                  <button className="modal-btn" onClick={closeConfirm} type="button" data-custom-icon="true"><ButtonIcon name="cancelar" /> Cancelar</button>
+                  <button className={`modal-btn ${confirmAction.type === 'accept' ? 'confirm-accept' : 'confirm-cancel'}`} onClick={runConfirmAction} type="button" data-custom-icon="true"><ButtonIcon name={confirmAction.type === 'accept' ? 'aceptar' : confirmAction.type === 'cancel' ? 'cancelar' : 'eliminar'} /> {confirmAction.type === 'accept' ? 'Aceptar' : confirmAction.type === 'cancel' ? 'Rechazar' : 'Eliminar'}</button>
                 </div>
               </div>
             </div>
@@ -4796,9 +4705,7 @@ function App() {
             <div className="modal-title" id="notice-modal-title">Aviso</div>
             <div className="modal-body">{noticeModal}</div>
             <div className="modal-actions">
-              <button autoFocus className="modal-btn confirm-accept" onClick={() => setNoticeModal(null)} type="button">
-                Aceptar
-              </button>
+              <button autoFocus className="modal-btn confirm-accept" onClick={() => setNoticeModal(null)} type="button" data-custom-icon="true"><ButtonIcon name="aceptar" /> Aceptar</button>
             </div>
           </div>
         </div>

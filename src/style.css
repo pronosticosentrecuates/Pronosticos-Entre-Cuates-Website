@@ -6394,3 +6394,90 @@ select.rp-input option {
   color: #e8edf5 !important;
   font-size: 18px;
 }
+
+/* User-supplied SVGs replace the old CSS/emoji icons on connected controls. */
+[data-custom-icon]::before,
+[data-custom-icon]::after {
+  content: none !important;
+  display: none !important;
+}
+
+[data-custom-icon] > .button-icon {
+  display: inline-block;
+  width: var(--button-icon-size, 16px);
+  height: var(--button-icon-size, 16px);
+  flex: 0 0 var(--button-icon-size, 16px);
+  color: inherit;
+  vertical-align: middle;
+  background-color: currentColor;
+  -webkit-mask: var(--button-icon-url) center / contain no-repeat;
+  mask: var(--button-icon-url) center / contain no-repeat;
+  pointer-events: none;
+}
+
+/* Low specificity preserves controls hidden by the desktop/mobile layouts. */
+.edit-icon-action[data-custom-icon] > .button-icon {
+  color: #fff;
+}
+
+:where([data-custom-icon]) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.nav-link-btn[data-custom-icon] {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.btn[data-custom-icon],
+.registro-back[data-custom-icon],
+.registro-export[data-custom-icon],
+.admin-q-action[data-custom-icon],
+.modal-btn[data-custom-icon] {
+  --button-icon-size: 18px;
+}
+
+.btn-send[data-custom-icon],
+.login-btn[data-custom-icon] {
+  --button-icon-size: 20px;
+  gap: 8px;
+}
+
+.nav-toggle[data-custom-icon],
+.nav-close[data-custom-icon] {
+  --button-icon-size: 22px;
+  display: grid;
+  place-items: center;
+  text-indent: 0;
+}
+
+/* Keep jornada action icons aligned and matched to each button's text color. */
+.jornada-item .acts-cell .act-btn[data-custom-icon] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+@media (max-width: 760px) {
+  /* Keep compact actions readable without shrinking their SVGs on narrow screens. */
+  .act-btn[data-custom-icon],
+  .ca-btn[data-custom-icon],
+  .tab-btn[data-custom-icon],
+  .logout-btn[data-custom-icon] {
+    --button-icon-size: 16px;
+    column-gap: 6px;
+  }
+
+  .modal-close-btn[data-custom-icon],
+  .qi-del[data-custom-icon] {
+    min-width: 40px;
+    min-height: 40px;
+    flex-shrink: 0;
+  }
+}
