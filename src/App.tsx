@@ -4737,8 +4737,7 @@ function App() {
 
       {activeView !== 'admin' ? (
         <footer className="footer">
-          Desarrollado por <a href="#">RRAD 2026</a> - Todos los derechos reservados
-          <p>Utilizamos Google Analytics para conocer las visitas y el uso del sitio.</p>
+          Desarrollado por <a href="#">RRAD.dev 2026</a> - Todos los derechos reservados
         </footer>
       ) : null}
     </div>
