@@ -3265,7 +3265,7 @@ function App() {
 
               <div className="actions">
                 <button className="btn btn-clear" id="clear-btn" onClick={limpiar} type="button" disabled={!registrosAbiertos} data-custom-icon="true"><ButtonIcon name="limpiar" /> Limpiar</button>
-                <button className="btn btn-add" id="add-btn" onClick={agregarQuiniela} type="button" disabled={!puedeAgregar} data-custom-icon="true"><ButtonIcon name="agregar" /> Agregar quiniela</button>
+                <button className="btn btn-add" id="add-btn" onClick={agregarQuiniela} type="button" disabled={!puedeAgregar} data-custom-icon="true"><ButtonIcon name="agregar" /><span>Agregar quiniela</span></button>
                 <button className="btn btn-random" id="random-btn" onClick={aleatorio} type="button" disabled={!registrosAbiertos} data-custom-icon="true"><ButtonIcon name="aleatorio" /> Aleatorio</button>
               </div>
 

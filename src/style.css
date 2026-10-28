@@ -2785,6 +2785,16 @@ body {
     text-align: center;
   }
 
+  .btn.btn-add[data-custom-icon] {
+    --button-icon-size: 16px;
+    gap: 4px;
+  }
+
+  .btn-add > span:not(.button-icon) {
+    min-width: 0;
+    text-align: left;
+  }
+
   .btn-send {
     font-size: 20px;
     padding: 16px;
