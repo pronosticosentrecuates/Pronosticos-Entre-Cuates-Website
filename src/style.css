@@ -4009,6 +4009,7 @@ body {
 }
 
 .admin-q-payment {
+  margin-top: 4px;
   min-height: 26px;
   padding: 4px 13px;
   border-radius: 999px;
@@ -6475,7 +6476,8 @@ select.rp-input option {
   }
 
   .modal-close-btn[data-custom-icon],
-  .qi-del[data-custom-icon] {
+  .qi-del[data-custom-icon],
+  .edit-icon-action[data-custom-icon] {
     min-width: 40px;
     min-height: 40px;
     flex-shrink: 0;

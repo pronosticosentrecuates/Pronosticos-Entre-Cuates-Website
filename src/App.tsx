@@ -1,3 +1,4 @@
+import { createRefreshQueue } from './services/refreshQueue'
 import { ButtonIcon } from './ButtonIcon'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from 'react'
@@ -644,34 +645,48 @@ function App() {
     loadFromDb()
   }, [])
 
-  // Reload quinielas from DB into local state
-  const refreshQuinielas = useCallback(async () => {
-    try {
-      const dashboard = await loadPublicDashboard()
-      setMatches(dashboard.matches)
-      setJornada(dashboard.jornada)
-      const dashboardJornadaId = dashboard.jornada?.id ?? null
-      const approvedQuinielas = dashboardJornadaId ? await loadApprovedQuinielas(dashboardJornadaId).catch((error) => {
-        console.error('Error cargando quinielas aprobadas publicas:', error)
-        return [] as SavedQuiniela[]
-      }) : []
-      setPublicApprovedQuinielas(approvedQuinielas)
-
-      const user = await getSessionUser()
-      if (user?.app_metadata?.role === 'admin') {
-        const [loaded, loadedJornadas, loadedMatches, loadedTournaments] = await Promise.all([loadQuinielas(), loadJornadas(), loadMatches(), loadTournaments()])
-        setQuinielas(loaded)
-        if (approvedQuinielas.length === 0) {
-          setPublicApprovedQuinielas(dashboardJornadaId ? loaded.filter((quiniela) => quiniela.status === 'accepted' && quiniela.jornadaId === dashboardJornadaId) : [])
-        }
-        setTournaments(loadedTournaments)
-        setJornadas(loadedJornadas)
-        setAdminMatches(loadedMatches)
+  // Public and admin data load independently; concurrent refreshes are coalesced.
+  const refreshQuinielas = useMemo(() => createRefreshQueue(async () => {
+    const refreshPublic = async () => {
+      try {
+        const dashboard = await loadPublicDashboard()
+        setMatches(dashboard.matches)
+        setJornada(dashboard.jornada)
+        const approved = dashboard.jornada?.id
+          ? await loadApprovedQuinielas(dashboard.jornada.id).catch((error) => {
+              console.error('Error cargando quinielas aprobadas publicas:', error)
+              return [] as SavedQuiniela[]
+            })
+          : []
+        setPublicApprovedQuinielas(approved)
+        return { jornadaId: dashboard.jornada?.id, approved }
+      } catch (error) {
+        console.error('Error cargando datos publicos:', error)
       }
-    } catch (err) {
-      console.error('Error cargando quinielas desde DB:', err)
     }
-  }, [])
+    const refreshAdmin = async () => {
+      try {
+        const user = await getSessionUser()
+        if (user?.app_metadata?.role !== 'admin') return
+        // Keep the complete history for counts, exports and deletion safeguards.
+        const [loaded] = await Promise.all([
+          loadQuinielas().then((rows) => { setQuinielas(rows); return rows }),
+          loadJornadas().then(setJornadas),
+          loadMatches().then(setAdminMatches),
+          loadTournaments().then(setTournaments),
+        ])
+        return loaded
+      } catch (error) {
+        console.error('Error cargando datos de admin:', error)
+      }
+    }
+    const [publicData, adminData] = await Promise.all([refreshPublic(), refreshAdmin()])
+    if (publicData && publicData.approved.length === 0 && adminData) {
+      setPublicApprovedQuinielas(publicData.jornadaId
+        ? adminData.filter((row) => row.status === 'accepted' && row.jornadaId === publicData.jornadaId)
+        : [])
+    }
+  }), [])
 
   // Keep selections in sync with the current Supabase match ids.
   useEffect(() => {
@@ -747,16 +762,25 @@ function App() {
     const supabase = getSupabase()
     if (!supabase) return
 
+    let refreshTimer: number | undefined
+    const scheduleRefresh = () => {
+      if (refreshTimer !== undefined) window.clearTimeout(refreshTimer)
+      refreshTimer = window.setTimeout(() => {
+        refreshTimer = undefined
+        void refreshQuinielas()
+      }, 300)
+    }
     const channel = supabase
       .channel('quinielas-live')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, () => void refreshQuinielas())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'jornadas' }, () => void refreshQuinielas())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'quinielas' }, () => void refreshQuinielas())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'selections' }, () => void refreshQuinielas())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'combinations' }, () => void refreshQuinielas())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, scheduleRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jornadas' }, scheduleRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'quinielas' }, scheduleRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'selections' }, scheduleRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'combinations' }, scheduleRefresh)
       .subscribe()
 
     return () => {
+      if (refreshTimer !== undefined) window.clearTimeout(refreshTimer)
       void supabase.removeChannel(channel)
     }
   }, [refreshQuinielas])

@@ -272,7 +272,7 @@ export async function loadQuinielas(jornadaId?: number): Promise<SavedQuiniela[]
       .from('quinielas')
       .select('*, selections(partido_id, seleccion), combinations(combination)')
       .order('id', { ascending: true })
-      .limit(100)
+      .limit(500)
 
     if (jornadaId) query = query.eq('jornada_id', jornadaId)
     if (lastId !== null) query = query.gt('id', lastId)

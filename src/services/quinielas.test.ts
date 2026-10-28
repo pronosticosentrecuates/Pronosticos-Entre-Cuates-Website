@@ -101,6 +101,6 @@ describe('loadQuinielas', () => {
 
     expect(result).toHaveLength(125)
     expect(result.every((quiniela) => quiniela.jornadaId === 18)).toBe(true)
-    expect(supabase.from).toHaveBeenCalledTimes(3)
+    expect(supabase.from).toHaveBeenCalledTimes(2)
   })
 })
