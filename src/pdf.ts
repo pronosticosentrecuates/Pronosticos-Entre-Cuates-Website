@@ -1,6 +1,7 @@
 import type { jsPDF } from 'jspdf'
 import { getTeamLogoSource } from './config'
 import type { Match } from './data'
+import { getMatchVersusLabel } from './data'
 
 export type PdfTeamLogoDataUrls = Map<string, string>
 
@@ -24,7 +25,7 @@ export function getPdfTeamLabel(teamName: string) {
 }
 
 export function getPdfMatchHeader(match: Match) {
-  return `${getPdfTeamLabel(match.local)} ${match.localScore ?? '-'}\nvs\n${getPdfTeamLabel(match.visitante)} ${match.visitanteScore ?? '-'}`
+  return `${getPdfTeamLabel(match.local)} ${match.localScore ?? '-'}\n${getMatchVersusLabel(match)}\n${getPdfTeamLabel(match.visitante)} ${match.visitanteScore ?? '-'}`
 }
 
 export function sortPdfRowsByPoints<T extends { id: number; folio?: string }>(
@@ -153,6 +154,6 @@ export function drawPdfMatchHeader(
   pdf.setFont('helvetica', 'bold')
   pdf.setFontSize(4.7)
   pdf.setTextColor(255, 255, 255)
-  pdf.text('vs', centerX, cell.y + rowHeight * 1.5 + 1.5, { align: 'center' })
+  pdf.text(getMatchVersusLabel(match), centerX, cell.y + rowHeight * 1.5 + 1.5, { align: 'center' })
   drawPdfTeamScore(pdf, centerX, cell.y + rowHeight * 2.5, match.visitante, match.visitanteScore, logoDataUrls)
 }

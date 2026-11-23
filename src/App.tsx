@@ -1,5 +1,6 @@
 import { createRefreshQueue } from './services/refreshQueue'
 import { ButtonIcon } from './ButtonIcon'
+import { MatchLegField } from './MatchLegField'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from 'react'
 import {
@@ -10,9 +11,11 @@ import {
   generateRandomSelections,
   getCosto,
   getMaxDobles,
+  getMatchVersusLabel,
   toggleSelection,
   validateQuinielaCompleta,
   type Match,
+  type MatchLeg,
   type MatchSelection,
   type Modalidad,
   type PickOption,
@@ -409,6 +412,7 @@ function App() {
   const [newMatchVisitante, setNewMatchVisitante] = useState('')
   const [newMatchDate, setNewMatchDate] = useState('')
   const [newMatchTime, setNewMatchTime] = useState('')
+  const [newMatchLeg, setNewMatchLeg] = useState<MatchLeg | ''>('')
   const [newMatchJornadaId, setNewMatchJornadaId] = useState('')
   const [ligaMxSeason, setLigaMxSeason] = useState(LIGA_MX_DEFAULT_SEASON)
   const [ligaMxRound, setLigaMxRound] = useState('')
@@ -422,6 +426,7 @@ function App() {
   const [dragOverMatchId, setDragOverMatchId] = useState<number | null>(null)
   const [editingMatchId, setEditingMatchId] = useState<number | null>(null)
   const [editLocal, setEditLocal] = useState('')
+  const [editMatchLeg, setEditMatchLeg] = useState<MatchLeg | ''>('')
   const [editVisitante, setEditVisitante] = useState('')
   const [editDate, setEditDate] = useState('')
   const [editTime, setEditTime] = useState('')
@@ -1231,6 +1236,7 @@ function App() {
       local,
       visitante,
       time: buildMatchTime(newMatchDate, newMatchTime, 'Por Definir'),
+      leg: newMatchLeg || undefined,
       timeClass,
       localImg: '',
       visitanteImg: '',
@@ -1247,13 +1253,14 @@ function App() {
       setNewMatchVisitante('')
       setNewMatchDate('')
       setNewMatchTime('')
+      setNewMatchLeg('')
       await refreshQuinielas()
       setShowAddMatchModal(false)
       const selectedJornada = openJornadas.find((item) => item.id === selectedJornadaId)
       setToast({ message: `Partido agregado a ${selectedJornada?.nombre ?? 'la jornada seleccionada'}.`, kind: 'success' })
     } catch (error) {
       console.error(error)
-      setToast({ message: 'No se pudo agregar el partido.', kind: 'error' })
+      setToast({ message: error instanceof Error ? error.message : 'No se pudo agregar el partido.', kind: 'error' })
     }
   }
 
@@ -2397,7 +2404,7 @@ function App() {
               <th className="registro-match-col registro-mobile-match-stack" key={`mobile-stack-${match.id}`}>
                 {renderTeamLogo(match.local, '⚽', 'registro-team-logo')}
                 <strong>{match.localScore ?? '-'}</strong>
-                <small>vs</small>
+                <small>{getMatchVersusLabel(match)}</small>
                 <strong>{match.visitanteScore ?? '-'}</strong>
                 {renderTeamLogo(match.visitante, '⚽', 'registro-team-logo')}
               </th>
@@ -2418,7 +2425,7 @@ function App() {
                       <strong className="registro-team-score">{match.localScore ?? '-'}</strong>
                     </span>
                   </span>
-                  <small>vs</small>
+                  <small>{getMatchVersusLabel(match)}</small>
                   <span className="registro-team-line away" title={match.visitante}>
                     {renderTeamLogo(match.visitante, '⚽', 'registro-team-logo')}
                     <span className="registro-team-name-score">
@@ -2818,6 +2825,7 @@ function App() {
   const startEditMatch = (match: Match) => {
     setEditingMatchId(match.id)
     setEditLocal(match.local)
+    setEditMatchLeg(match.leg ?? '')
     setEditVisitante(match.visitante)
     setEditLocalScore(match.localScore?.toString() ?? '')
     setEditVisitanteScore(match.visitanteScore?.toString() ?? '')
@@ -2832,6 +2840,7 @@ function App() {
   const cancelEditMatch = () => {
     setEditingMatchId(null)
     setEditLocal('')
+    setEditMatchLeg('')
     setEditVisitante('')
     setEditDate('')
     setEditTime('')
@@ -2863,6 +2872,7 @@ function App() {
       local: editLocal.trim() || currentMatch?.local || '',
       visitante: editVisitante.trim() || currentMatch?.visitante || '',
       time: buildMatchTime(editDate, editTime, currentMatch?.time || ''),
+      leg: editMatchLeg || (currentMatch?.leg === undefined ? undefined : null),
       timeClass,
       localImg: currentMatch?.localImg || '',
       visitanteImg: currentMatch?.visitanteImg || '',
@@ -2877,7 +2887,7 @@ function App() {
       setToast({ message: 'Partido actualizado.', kind: 'success' })
     } catch (err) {
       console.error(err)
-      setToast({ message: 'No se pudo actualizar el partido en la base de datos.', kind: 'error' })
+      setToast({ message: err instanceof Error ? err.message : 'No se pudo actualizar el partido en la base de datos.', kind: 'error' })
     }
   }
 
@@ -3154,7 +3164,7 @@ function App() {
                             {renderTeamLogo(match.local, '⚽', 'team-logo-img')}
                             <div className="team-name-home">{match.local}</div>
                           </div>
-                          <div className="match-vs">vs</div>
+                          <div className="match-vs">{getMatchVersusLabel(match)}</div>
                           <div className="team-badge team-away">
                             <div className="team-name-away">{match.visitante}</div>
                             {renderTeamLogo(match.visitante, '⚽', 'team-logo-img')}
@@ -3818,6 +3828,7 @@ function App() {
                                           <input className="rp-input" type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} />
                                           <input className="rp-input" type="time" value={editTime} onChange={(e) => setEditTime(e.target.value)} />
                                         </div>
+                                        <MatchLegField value={editMatchLeg} onChange={setEditMatchLeg} />
                                         <div className="mcr-jornada-edit">
                                           <select
                                             className="rp-input"
@@ -3845,7 +3856,7 @@ function App() {
                                             {match.local}
                                             <span className="mcr-score-pill">{match.localScore ?? '—'}</span>
                                           </span>
-                                          <span className="mcr-vs">vs</span>
+                                          <span className="mcr-vs">{getMatchVersusLabel(match)}</span>
                                           <span className="mcr-team-name away">
                                             {match.visitante}
                                             <span className="mcr-score-pill">{match.visitanteScore ?? '—'}</span>
@@ -3975,6 +3986,7 @@ function App() {
                                 <div className="rp-label">Hora</div>
                                 <input className="rp-input" type="time" value={newMatchTime} onChange={(e) => setNewMatchTime(e.target.value)} />
                               </div>
+                              <MatchLegField value={newMatchLeg} onChange={setNewMatchLeg} />
                               <div style={{ marginTop: 8 }}>
                                 <button className="ca-btn save" onClick={addMatch} type="button" data-custom-icon="true"><ButtonIcon name="agregar" /> Agregar partido</button>
                               </div>
@@ -4297,7 +4309,7 @@ function App() {
                           {getJornadaMatches(editingJornadaId).map((match) => (
                             <div className="jornada-match-item" key={match.id}>
                               <span>{match.local}</span>
-                              <strong>vs</strong>
+                              <strong>{getMatchVersusLabel(match)}</strong>
                               <span>{match.visitante}</span>
                               <em>{formatMatchTime(match.time)}</em>
                             </div>
@@ -4422,6 +4434,7 @@ function App() {
                       <span>Hora</span>
                       <input className="rp-input" type="time" value={newMatchTime} onChange={(event) => setNewMatchTime(event.target.value)} />
                     </label>
+                    <MatchLegField value={newMatchLeg} onChange={setNewMatchLeg} />
                   </div>
                   <div className="admin-quiniela-actions">
                     <button className="act-btn cancel" onClick={() => setShowAddMatchModal(false)} type="button" data-custom-icon="true"><ButtonIcon name="cancelar" /> Cancelar</button>
@@ -4485,6 +4498,7 @@ function App() {
                       <span>Hora</span>
                       <input className="rp-input" type="time" value={editTime} onChange={(event) => setEditTime(event.target.value)} />
                     </label>
+                    <MatchLegField value={editMatchLeg} onChange={setEditMatchLeg} />
                     <label className="jornada-field">
                       <span>Jornada</span>
                       <select className="rp-input" disabled={jornadas.length === 0} value={editMatchJornadaId} onChange={(event) => setEditMatchJornadaId(event.target.value)}>
@@ -4555,7 +4569,7 @@ function App() {
                               {renderTeamLogo(match.local, '⚽', 'admin-quiniela-logo')}
                               <strong>{match.local}</strong>
                             </div>
-                            <span>vs</span>
+                            <span>{getMatchVersusLabel(match)}</span>
                             <div className="admin-quiniela-team away">
                               <strong>{match.visitante}</strong>
                               {renderTeamLogo(match.visitante, '⚽', 'admin-quiniela-logo')}

@@ -2,10 +2,22 @@ export type PickOption = 'L' | 'E' | 'V'
 
 export type Modalidad = '3 dobles' | '5 dobles'
 
+export type MatchLeg = 'ida' | 'vuelta'
+
+export function getMatchLegLabel(leg: MatchLeg | null | undefined): string {
+  return leg === 'ida' ? 'Ida' : leg === 'vuelta' ? 'Vuelta' : ''
+}
+
+export function getMatchVersusLabel(match: Pick<Match, 'leg'>): string {
+  const label = getMatchLegLabel(match.leg)
+  return label ? `vs · ${label}` : 'vs'
+}
+
 export interface Match {
   id: number
   jornadaId?: number
   sortOrder?: number
+  leg?: MatchLeg | null
   local: string
   visitante: string
   time: string

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Match, MatchSelection, Modalidad, PickOption, QuinielaData } from '../data'
+import type { Match, MatchLeg, MatchSelection, Modalidad, PickOption, QuinielaData } from '../data'
 import { getTeamDisplayName } from '../config'
 import type { Jornada, JornadaStatus, PaymentStatus, PublicRankingEntry, PublicStats, QuinielaStatus, SavedQuiniela, Tournament, TournamentStatus } from '../types'
 import { getSupabase } from '../../utils/supabase'
@@ -8,6 +8,7 @@ type MatchRow = {
   id: number
   jornada_id?: number
   sort_order?: number | null
+  leg?: MatchLeg | null
   local: string
   visitante: string
   time: string | null
@@ -92,6 +93,7 @@ function mapMatch(row: MatchRow): Match {
     id: row.id,
     jornadaId: row.jornada_id,
     sortOrder: row.sort_order === undefined ? undefined : Number(row.sort_order ?? row.id),
+    leg: row.leg,
     local: getTeamDisplayName(row.local),
     visitante: getTeamDisplayName(row.visitante),
     time: row.time ?? '',
@@ -495,6 +497,13 @@ export async function deleteQuinielaById(id: number) {
   if (error) throw error
 }
 
+function throwMatchWriteError(error: { code?: string; message?: string }) {
+  if ((error.code === '42703' || error.code === 'PGRST204') && /\bleg\b/i.test(error.message ?? '')) {
+    throw new Error('Falta aplicar la migración de Ida/Vuelta en Supabase (20261123000000_match_leg.sql).')
+  }
+  throw error
+}
+
 export async function insertMatch(match: Omit<Match, 'id'>, jornadaId: number): Promise<Match> {
   const supabase = requireSupabase()
   const { data: lastMatch, error: lastMatchError } = await supabase
@@ -524,8 +533,9 @@ export async function insertMatch(match: Omit<Match, 'id'>, jornadaId: number): 
     local_score: match.localScore, visitante_score: match.visitanteScore,
   }
   if (sortOrder !== undefined) payload.sort_order = sortOrder
+  if (match.leg !== undefined) payload.leg = match.leg
   const { error } = await supabase.from('matches').insert(payload)
-  if (error) throw error
+  if (error) throwMatchWriteError(error)
   return { ...match, id, jornadaId, sortOrder }
 }
 
@@ -535,6 +545,7 @@ export async function updateMatch(match: Match) {
     local: match.local, visitante: match.visitante, time: match.time, time_class: match.timeClass,
     local_img: match.localImg, visitante_img: match.visitanteImg, local_score: match.localScore, visitante_score: match.visitanteScore,
   }
+  if (match.leg !== undefined) payload.leg = match.leg
   if (match.jornadaId !== undefined) {
     const { data: currentMatch, error: currentMatchError } = await supabase
       .from('matches')
@@ -563,7 +574,7 @@ export async function updateMatch(match: Match) {
     }
   }
   const { error } = await supabase.from('matches').update(payload).eq('id', match.id)
-  if (error) throw error
+  if (error) throwMatchWriteError(error)
 }
 
 export async function reorderMatches(jornadaId: number, orderedMatchIds: number[]) {

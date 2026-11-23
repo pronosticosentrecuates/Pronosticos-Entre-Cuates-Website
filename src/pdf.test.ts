@@ -25,6 +25,10 @@ describe('encabezados de partidos en PDF', () => {
     expect(getPdfMatchHeader(match)).toBe('CHI -\nvs\nATL -')
   })
 
+  it.each([['ida', 'Ida'], ['vuelta', 'Vuelta']] as const)('incluye %s en el encabezado', (leg, label) => {
+    expect(getPdfMatchHeader({ ...match, leg })).toBe(`CHI -\nvs · ${label}\nATL -`)
+  })
+
   it('ordena las filas de mayor a menor puntaje y desempata por folio', () => {
     const rows = [
       { id: 3, folio: 'Q1-000003', points: 0 },
