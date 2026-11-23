@@ -1,7 +1,7 @@
 import type { jsPDF } from 'jspdf'
 import { getTeamLogoSource } from './config'
 import type { Match } from './data'
-import { getMatchVersusLabel } from './data'
+import { getMatchLegLabel } from './data'
 
 export type PdfTeamLogoDataUrls = Map<string, string>
 
@@ -25,7 +25,8 @@ export function getPdfTeamLabel(teamName: string) {
 }
 
 export function getPdfMatchHeader(match: Match) {
-  return `${getPdfTeamLabel(match.local)} ${match.localScore ?? '-'}\n${getMatchVersusLabel(match)}\n${getPdfTeamLabel(match.visitante)} ${match.visitanteScore ?? '-'}`
+  const legLabel = getMatchLegLabel(match.leg)
+  return `${legLabel ? `${legLabel}\n` : ''}${getPdfTeamLabel(match.local)} ${match.localScore ?? '-'}\nvs\n${getPdfTeamLabel(match.visitante)} ${match.visitanteScore ?? '-'}`
 }
 
 export function sortPdfRowsByPoints<T extends { id: number; folio?: string }>(
@@ -148,12 +149,22 @@ export function drawPdfMatchHeader(
   logoDataUrls: PdfTeamLogoDataUrls,
 ) {
   const centerX = cell.x + cell.width / 2
-  const rowHeight = cell.height / 3
+  const legLabel = getMatchLegLabel(match.leg)
+  const labelHeight = legLabel ? 3.5 : 0
+  const teamsY = cell.y + labelHeight
+  const rowHeight = (cell.height - labelHeight) / 3
 
-  drawPdfTeamScore(pdf, centerX, cell.y + rowHeight / 2, match.local, match.localScore, logoDataUrls)
+  if (legLabel) {
+    pdf.setFont('helvetica', 'bold')
+    pdf.setFontSize(5.2)
+    pdf.setTextColor(255, 255, 255)
+    pdf.text(legLabel, centerX, cell.y + 2.8, { align: 'center' })
+  }
+
+  drawPdfTeamScore(pdf, centerX, teamsY + rowHeight / 2, match.local, match.localScore, logoDataUrls)
   pdf.setFont('helvetica', 'bold')
   pdf.setFontSize(4.7)
   pdf.setTextColor(255, 255, 255)
-  pdf.text(getMatchVersusLabel(match), centerX, cell.y + rowHeight * 1.5 + 1.5, { align: 'center' })
-  drawPdfTeamScore(pdf, centerX, cell.y + rowHeight * 2.5, match.visitante, match.visitanteScore, logoDataUrls)
+  pdf.text('vs', centerX, teamsY + rowHeight * 1.5 + 1.5, { align: 'center' })
+  drawPdfTeamScore(pdf, centerX, teamsY + rowHeight * 2.5, match.visitante, match.visitanteScore, logoDataUrls)
 }

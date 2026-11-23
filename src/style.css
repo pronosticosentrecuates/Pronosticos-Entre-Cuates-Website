@@ -763,6 +763,42 @@ body {
   background: rgba(255, 255, 255, 0.02);
 }
 
+.match-leg-heading {
+  display: block;
+  width: 100%;
+  flex-basis: 100%;
+  text-align: center;
+}
+
+.match-leg-heading .match-leg-badge {
+  display: inline-block;
+  padding: 3px 9px;
+  border: 1px solid rgba(0, 229, 255, 0.25);
+  border-radius: 6px;
+  background: rgba(0, 229, 255, 0.1);
+  color: var(--cyan);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.5px;
+  text-transform: none;
+}
+
+.mcr-teams > .match-leg-heading {
+  margin-bottom: 6px;
+}
+
+.jornada-match-item > .match-leg-heading {
+  grid-column: 1 / -1;
+}
+
+.registro-table .match-leg-badge {
+  padding: 2px 4px;
+  font-size: 9px;
+  letter-spacing: 0;
+}
+
 .match-top {
   display: flex;
   align-items: center;

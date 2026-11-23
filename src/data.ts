@@ -8,11 +8,6 @@ export function getMatchLegLabel(leg: MatchLeg | null | undefined): string {
   return leg === 'ida' ? 'Ida' : leg === 'vuelta' ? 'Vuelta' : ''
 }
 
-export function getMatchVersusLabel(match: Pick<Match, 'leg'>): string {
-  const label = getMatchLegLabel(match.leg)
-  return label ? `vs · ${label}` : 'vs'
-}
-
 export interface Match {
   id: number
   jornadaId?: number

@@ -1,6 +1,7 @@
 import { createRefreshQueue } from './services/refreshQueue'
 import { ButtonIcon } from './ButtonIcon'
 import { MatchLegField } from './MatchLegField'
+import { MatchLegBadge } from './MatchLegBadge'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from 'react'
 import {
@@ -11,7 +12,6 @@ import {
   generateRandomSelections,
   getCosto,
   getMaxDobles,
-  getMatchVersusLabel,
   toggleSelection,
   validateQuinielaCompleta,
   type Match,
@@ -2402,9 +2402,10 @@ function App() {
             {showStatus ? <th className="registro-phone-col">Tel.</th> : null}
             {registroMatches.map((match) => (
               <th className="registro-match-col registro-mobile-match-stack" key={`mobile-stack-${match.id}`}>
+                <MatchLegBadge leg={match.leg} />
                 {renderTeamLogo(match.local, '⚽', 'registro-team-logo')}
                 <strong>{match.localScore ?? '-'}</strong>
-                <small>{getMatchVersusLabel(match)}</small>
+                <small>vs</small>
                 <strong>{match.visitanteScore ?? '-'}</strong>
                 {renderTeamLogo(match.visitante, '⚽', 'registro-team-logo')}
               </th>
@@ -2419,13 +2420,14 @@ function App() {
             {registroMatches.map((match) => (
               <th className="registro-match-col" key={match.id}>
                 <span className="registro-team-label">
+                  <MatchLegBadge leg={match.leg} />
                   <span className="registro-team-line" title={match.local}>
                     {renderTeamLogo(match.local, '⚽', 'registro-team-logo')}
                     <span className="registro-team-name-score">
                       <strong className="registro-team-score">{match.localScore ?? '-'}</strong>
                     </span>
                   </span>
-                  <small>{getMatchVersusLabel(match)}</small>
+                  <small>vs</small>
                   <span className="registro-team-line away" title={match.visitante}>
                     {renderTeamLogo(match.visitante, '⚽', 'registro-team-logo')}
                     <span className="registro-team-name-score">
@@ -3159,12 +3161,13 @@ function App() {
                     ) : null}
                     {publicMatches.map((match, index) => (
                       <div className={`match-row${index % 2 === 1 ? ' alt' : ''}`} key={match.id}>
+                        <MatchLegBadge leg={match.leg} />
                         <div className="match-top">
                           <div className="team-badge team-home">
                             {renderTeamLogo(match.local, '⚽', 'team-logo-img')}
                             <div className="team-name-home">{match.local}</div>
                           </div>
-                          <div className="match-vs">{getMatchVersusLabel(match)}</div>
+                          <div className="match-vs">vs</div>
                           <div className="team-badge team-away">
                             <div className="team-name-away">{match.visitante}</div>
                             {renderTeamLogo(match.visitante, '⚽', 'team-logo-img')}
@@ -3852,11 +3855,12 @@ function App() {
                                     ) : (
                                       <>
                                         <div className="mcr-teams">
+                                          <MatchLegBadge leg={match.leg} />
                                           <span className="mcr-team-name">
                                             {match.local}
                                             <span className="mcr-score-pill">{match.localScore ?? '—'}</span>
                                           </span>
-                                          <span className="mcr-vs">{getMatchVersusLabel(match)}</span>
+                                          <span className="mcr-vs">vs</span>
                                           <span className="mcr-team-name away">
                                             {match.visitante}
                                             <span className="mcr-score-pill">{match.visitanteScore ?? '—'}</span>
@@ -4308,8 +4312,9 @@ function App() {
                         <div className="jornada-match-list">
                           {getJornadaMatches(editingJornadaId).map((match) => (
                             <div className="jornada-match-item" key={match.id}>
+                              <MatchLegBadge leg={match.leg} />
                               <span>{match.local}</span>
-                              <strong>{getMatchVersusLabel(match)}</strong>
+                              <strong>vs</strong>
                               <span>{match.visitante}</span>
                               <em>{formatMatchTime(match.time)}</em>
                             </div>
@@ -4564,12 +4569,13 @@ function App() {
 
                       return (
                         <div className="admin-quiniela-match" key={match.id}>
+                          <MatchLegBadge leg={match.leg} />
                           <div className="admin-quiniela-match-name">
                             <div className="admin-quiniela-team">
                               {renderTeamLogo(match.local, '⚽', 'admin-quiniela-logo')}
                               <strong>{match.local}</strong>
                             </div>
-                            <span>{getMatchVersusLabel(match)}</span>
+                            <span>vs</span>
                             <div className="admin-quiniela-team away">
                               <strong>{match.visitante}</strong>
                               {renderTeamLogo(match.visitante, '⚽', 'admin-quiniela-logo')}
