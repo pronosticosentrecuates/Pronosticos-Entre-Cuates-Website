@@ -797,6 +797,12 @@ body {
   padding: 1px;
 }
 
+/* Los escudos oscuros y monocromos de Premier necesitan contraste en el tema oscuro. */
+img[src^="/logos_equipos/premier-league/"] {
+  background-color: #fff;
+  border-radius: 3px;
+}
+
 .team-logo-emoji {
   width: 26px;
   height: 26px;

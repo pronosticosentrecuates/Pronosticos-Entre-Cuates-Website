@@ -1,0 +1,122 @@
+[
+  {
+    "slug": "afc-bournemouth",
+    "name": "AFC Bournemouth",
+    "filename": "bournemouth.svg",
+    "sha256": "1202282d248765fe29bb49888bf50ef709f3711a63f6253eda3b16e1ff3730c3"
+  },
+  {
+    "slug": "arsenal",
+    "name": "Arsenal",
+    "filename": "arsenal.svg",
+    "sha256": "4528330d3dae5001e270aff593a3388cc1763d471273b5844c2fab571bcf2c04"
+  },
+  {
+    "slug": "aston-villa",
+    "name": "Aston Villa",
+    "filename": "aston-villa.svg",
+    "sha256": "0aabf95c6bd3086725b674fcbd7805e050b60248e74d9a7f09e81ed29d504a59"
+  },
+  {
+    "slug": "brentford",
+    "name": "Brentford",
+    "filename": "brentford.svg",
+    "sha256": "91cfb73abd5a8e693eaa71ad388bb7d18b4ba57fc7896730edf7809a003ef6d6"
+  },
+  {
+    "slug": "brighton-and-hove-albion",
+    "name": "Brighton & Hove Albion",
+    "filename": "brighton.svg",
+    "sha256": "af40c1e9208a0a0340c95abce8befb0a5f8d4abff0786c870c4d9b2fae1bc037"
+  },
+  {
+    "slug": "chelsea",
+    "name": "Chelsea",
+    "filename": "chelsea.svg",
+    "sha256": "77da8fb4cb74216354f568a9fd9ed04cc0ce362de62a6fc6daf3d32c7b85f88e"
+  },
+  {
+    "slug": "coventry-city",
+    "name": "Coventry City",
+    "filename": "coventry-city.svg",
+    "sha256": "1406f0bafc14f66dcbd477ffc47d24a829ca28167864ac13852fe6a1011139df"
+  },
+  {
+    "slug": "crystal-palace",
+    "name": "Crystal Palace",
+    "filename": "crystal-palace.svg",
+    "sha256": "4045f28c2ddce178181bb34efe4a8373b13431007ace53f071cc7ecf27237595"
+  },
+  {
+    "slug": "everton",
+    "name": "Everton",
+    "filename": "everton.svg",
+    "sha256": "cf5cfa0007e30609be140f8b95fae65128f2188314e3a10737833a6803862318"
+  },
+  {
+    "slug": "fulham",
+    "name": "Fulham",
+    "filename": "fulham.svg",
+    "sha256": "35e328889103925fd6773bf3e18b7ec0da1667ac331701465fa35d59421c32fd"
+  },
+  {
+    "slug": "hull-city",
+    "name": "Hull City",
+    "filename": "hull-city.svg",
+    "sha256": "d3da3a0316c3e6e524e060dda38478d8f548aea33cba43e5960e0f4c0b5d8004"
+  },
+  {
+    "slug": "ipswich-town",
+    "name": "Ipswich Town",
+    "filename": "ipswich-town.svg",
+    "sha256": "78a3e3ce80aae2f9630e88c03a5c3116fa001509b0f2849bed24032aae60548d"
+  },
+  {
+    "slug": "leeds-united",
+    "name": "Leeds United",
+    "filename": "leeds-united.svg",
+    "sha256": "249b34f2328334e468438d8ca9cae170c765252fb9b05997c5cdc276b0919b1e"
+  },
+  {
+    "slug": "liverpool-fc",
+    "name": "Liverpool FC",
+    "filename": "liverpool.svg",
+    "sha256": "1e074ceae314ac9244d1dabdb19ec2039afb12351225a2040595b7feabd2376f"
+  },
+  {
+    "slug": "manchester-city",
+    "name": "Manchester City",
+    "filename": "manchester-city.svg",
+    "sha256": "c2d3f988ac3aaeb72e6c1db249c78df460ebda15c1cb2b6a45c40d7e599f5d35"
+  },
+  {
+    "slug": "manchester-united",
+    "name": "Manchester United",
+    "filename": "manchester-united.svg",
+    "sha256": "dc9b872bfdd7b240f67cd55c92d1f38dbedf59f681a53827207456412ecb653c"
+  },
+  {
+    "slug": "newcastle-united",
+    "name": "Newcastle United",
+    "filename": "newcastle-united.svg",
+    "sha256": "fc1c16b57a8aef7b7999b82841be917368fd873591f02b7aabbf5462b0139c3e"
+  },
+  {
+    "slug": "nottingham-forest",
+    "name": "Nottingham Forest",
+    "filename": "nottingham-forest.svg",
+    "sha256": "c03e2b3ea8c137fa403c9d0ff13b97acce6e3562442a4c0124679a0bfea78fb7"
+  },
+  {
+    "slug": "sunderland",
+    "name": "Sunderland",
+    "filename": "sunderland.svg",
+    "sha256": "285f696bbff1a89134b1277140470ab10ec535e0e2015d0a2ba83df8b4ee4811"
+  },
+  {
+    "slug": "tottenham-hotspur",
+    "name": "Tottenham Hotspur",
+    "filename": "tottenham-hotspur.svg",
+    "sha256": "924c1cc7fffef09387933ef882ada64304d980ee0bc82988eb70fe48efd0f774"
+  }
+]

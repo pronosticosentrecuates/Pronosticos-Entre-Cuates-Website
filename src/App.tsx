@@ -17,7 +17,7 @@ import {
   type Modalidad,
   type PickOption,
 } from './data'
-import { APP_CONFIG, EXPANSION_TEAM_NAMES, getTeamLogoSource, INTERNATIONAL_TEAM_NAMES, LIGA_MX_TEAM_NAMES, MLS_TEAM_NAMES } from './config'
+import { APP_CONFIG, EXPANSION_TEAM_NAMES, getTeamLogoSource, INTERNATIONAL_TEAM_NAMES, LIGA_MX_TEAM_NAMES, MLS_TEAM_NAMES, PREMIER_LEAGUE_TEAM_NAMES } from './config'
 import {
   deleteJornadaById,
   deleteMatchById,
@@ -73,7 +73,7 @@ type AdminDeleteConfirm = {
   name: string
 } | null
 
-type TeamCatalog = 'liga-mx' | 'expansion' | 'mls' | 'internacional'
+type TeamCatalog = 'liga-mx' | 'expansion' | 'mls' | 'premier-league' | 'internacional'
 
 type ImportedMatch = Omit<Match, 'id'> & {
   sourceId: string
@@ -447,6 +447,7 @@ function App() {
     'liga-mx': LIGA_MX_TEAM_NAMES,
     expansion: EXPANSION_TEAM_NAMES,
     mls: MLS_TEAM_NAMES,
+    'premier-league': PREMIER_LEAGUE_TEAM_NAMES,
     internacional: INTERNATIONAL_TEAM_NAMES,
   }[teamCatalog]
   const filterTeams = (q: string) => {
@@ -464,6 +465,7 @@ function App() {
       { id: 'liga-mx', badge: 'MX', label: 'Liga MX', detail: `${LIGA_MX_TEAM_NAMES.length} equipos` },
       { id: 'expansion', badge: 'EXP', label: 'Liga de Expansión', detail: `${EXPANSION_TEAM_NAMES.length} equipos` },
       { id: 'mls', badge: 'US', label: 'MLS', detail: `${MLS_TEAM_NAMES.length} equipos` },
+      { id: 'premier-league', badge: 'ENG', label: 'Premier League', detail: `${PREMIER_LEAGUE_TEAM_NAMES.length} equipos` },
       { id: 'internacional', badge: 'INT', label: 'Internacional', detail: `${INTERNATIONAL_TEAM_NAMES.length} selecciones` },
     ]
     const activeCatalog = catalogOptions.find((option) => option.id === teamCatalog) ?? catalogOptions[0]

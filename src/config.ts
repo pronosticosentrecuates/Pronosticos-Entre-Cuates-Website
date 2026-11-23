@@ -62,49 +62,49 @@ const COUNTRY_LOGOS = Object.fromEntries(
 ) as Record<string, string>
 
 const CLUB_LOGOS: Record<string, string> = {
-  America: '/logos_equipos/america.svg',
-  América: '/logos_equipos/america.svg',
-  'Club America': '/logos_equipos/america.svg',
-  Atlas: '/logos_equipos/atlas.svg',
-  Atlante: '/logos_equipos/atlante.svg',
-  'Atletico de San Luis': '/logos_equipos/san_luis.svg',
-  'Atletico San Luis': '/logos_equipos/san_luis.svg',
-  'Atl. San Luis': '/logos_equipos/san_luis.svg',
-  'San Luis': '/logos_equipos/san_luis.svg',
-  'CD Guadalajara': '/logos_equipos/chivas.svg',
-  Chivas: '/logos_equipos/chivas.svg',
-  Guadalajara: '/logos_equipos/chivas.svg',
-  Correcaminos: '/logos_equipos/correcaminos.svg',
-  'Correcaminos UAT': '/logos_equipos/correcaminos.svg',
-  'Cruz Azul': '/logos_equipos/cruz_azul.svg',
-  Juarez: '/logos_equipos/juarez.svg',
-  Juárez: '/logos_equipos/juarez.svg',
-  'FC Juarez': '/logos_equipos/juarez.svg',
-  Leon: '/logos_equipos/leon.svg',
-  León: '/logos_equipos/leon.svg',
-  'Club Leon': '/logos_equipos/leon.svg',
-  Monterrey: '/logos_equipos/monterrey.svg',
-  Mineros: '/logos_equipos/mineros.svg',
-  'Mineros de Zacatecas': '/logos_equipos/mineros.svg',
-  Necaxa: '/logos_equipos/necaxa.svg',
-  Pachuca: '/logos_equipos/pachuca.svg',
-  Puebla: '/logos_equipos/puebla.svg',
-  Pumas: '/logos_equipos/pumas.svg',
-  'Pumas UNAM': '/logos_equipos/pumas.svg',
-  'UNAM Pumas': '/logos_equipos/pumas.svg',
-  'U.N.A.M.': '/logos_equipos/pumas.svg',
-  'Club Universidad Nacional': '/logos_equipos/pumas.svg',
-  Queretaro: '/logos_equipos/queretaro.svg',
-  Querétaro: '/logos_equipos/queretaro.svg',
-  Santos: '/logos_equipos/santos.svg',
-  'Santos Laguna': '/logos_equipos/santos.svg',
-  Tigres: '/logos_equipos/tigres.svg',
-  'Tigres UANL': '/logos_equipos/tigres.svg',
-  'UANL Tigres': '/logos_equipos/tigres.svg',
-  'Club Tigres': '/logos_equipos/tigres.svg',
-  'Tigres de la UANL': '/logos_equipos/tigres.svg',
-  Tijuana: '/logos_equipos/tijuana.svg',
-  Toluca: '/logos_equipos/toluca.svg',
+  America: '/logos_equipos/liga-mx/america.svg',
+  América: '/logos_equipos/liga-mx/america.svg',
+  'Club America': '/logos_equipos/liga-mx/america.svg',
+  Atlas: '/logos_equipos/liga-mx/atlas.svg',
+  Atlante: '/logos_equipos/liga-mx/atlante.svg',
+  'Atletico de San Luis': '/logos_equipos/liga-mx/san_luis.svg',
+  'Atletico San Luis': '/logos_equipos/liga-mx/san_luis.svg',
+  'Atl. San Luis': '/logos_equipos/liga-mx/san_luis.svg',
+  'San Luis': '/logos_equipos/liga-mx/san_luis.svg',
+  'CD Guadalajara': '/logos_equipos/liga-mx/chivas.svg',
+  Chivas: '/logos_equipos/liga-mx/chivas.svg',
+  Guadalajara: '/logos_equipos/liga-mx/chivas.svg',
+  Correcaminos: '/logos_equipos/liga-mx/correcaminos.svg',
+  'Correcaminos UAT': '/logos_equipos/liga-mx/correcaminos.svg',
+  'Cruz Azul': '/logos_equipos/liga-mx/cruz_azul.svg',
+  Juarez: '/logos_equipos/liga-mx/juarez.svg',
+  Juárez: '/logos_equipos/liga-mx/juarez.svg',
+  'FC Juarez': '/logos_equipos/liga-mx/juarez.svg',
+  Leon: '/logos_equipos/liga-mx/leon.svg',
+  León: '/logos_equipos/liga-mx/leon.svg',
+  'Club Leon': '/logos_equipos/liga-mx/leon.svg',
+  Monterrey: '/logos_equipos/liga-mx/monterrey.svg',
+  Mineros: '/logos_equipos/liga-mx/mineros.svg',
+  'Mineros de Zacatecas': '/logos_equipos/liga-mx/mineros.svg',
+  Necaxa: '/logos_equipos/liga-mx/necaxa.svg',
+  Pachuca: '/logos_equipos/liga-mx/pachuca.svg',
+  Puebla: '/logos_equipos/liga-mx/puebla.svg',
+  Pumas: '/logos_equipos/liga-mx/pumas.svg',
+  'Pumas UNAM': '/logos_equipos/liga-mx/pumas.svg',
+  'UNAM Pumas': '/logos_equipos/liga-mx/pumas.svg',
+  'U.N.A.M.': '/logos_equipos/liga-mx/pumas.svg',
+  'Club Universidad Nacional': '/logos_equipos/liga-mx/pumas.svg',
+  Queretaro: '/logos_equipos/liga-mx/queretaro.svg',
+  Querétaro: '/logos_equipos/liga-mx/queretaro.svg',
+  Santos: '/logos_equipos/liga-mx/santos.svg',
+  'Santos Laguna': '/logos_equipos/liga-mx/santos.svg',
+  Tigres: '/logos_equipos/liga-mx/tigres.svg',
+  'Tigres UANL': '/logos_equipos/liga-mx/tigres.svg',
+  'UANL Tigres': '/logos_equipos/liga-mx/tigres.svg',
+  'Club Tigres': '/logos_equipos/liga-mx/tigres.svg',
+  'Tigres de la UANL': '/logos_equipos/liga-mx/tigres.svg',
+  Tijuana: '/logos_equipos/liga-mx/tijuana.svg',
+  Toluca: '/logos_equipos/liga-mx/toluca.svg',
 }
 
 const MLS_CLUB_LOGOS: Record<string, string> = {
@@ -136,6 +136,30 @@ const EXPANSION_CLUB_LOGOS: Record<string, string> = {
   Tapatío: '/logos_equipos/expansion/tapatio.svg',
   Tapatio: '/logos_equipos/expansion/tapatio.svg',
   'CD Tapatío': '/logos_equipos/expansion/tapatio.svg',
+}
+
+// Escudos de Premier League en public/logos_equipos/premier-league.
+const PREMIER_LEAGUE_CLUB_LOGOS: Record<string, string> = {
+  Arsenal: '/logos_equipos/premier-league/arsenal.svg',
+  'Aston Villa': '/logos_equipos/premier-league/aston-villa.svg',
+  Bournemouth: '/logos_equipos/premier-league/bournemouth.svg',
+  Brentford: '/logos_equipos/premier-league/brentford.svg',
+  'Brighton & Hove Albion': '/logos_equipos/premier-league/brighton.svg',
+  Chelsea: '/logos_equipos/premier-league/chelsea.svg',
+  'Coventry City': '/logos_equipos/premier-league/coventry-city.svg',
+  'Crystal Palace': '/logos_equipos/premier-league/crystal-palace.svg',
+  Everton: '/logos_equipos/premier-league/everton.svg',
+  Fulham: '/logos_equipos/premier-league/fulham.svg',
+  'Hull City': '/logos_equipos/premier-league/hull-city.svg',
+  'Ipswich Town': '/logos_equipos/premier-league/ipswich-town.svg',
+  'Leeds United': '/logos_equipos/premier-league/leeds-united.svg',
+  Liverpool: '/logos_equipos/premier-league/liverpool.svg',
+  'Manchester City': '/logos_equipos/premier-league/manchester-city.svg',
+  'Manchester United': '/logos_equipos/premier-league/manchester-united.svg',
+  'Newcastle United': '/logos_equipos/premier-league/newcastle-united.svg',
+  'Nottingham Forest': '/logos_equipos/premier-league/nottingham-forest.svg',
+  Sunderland: '/logos_equipos/premier-league/sunderland.svg',
+  'Tottenham Hotspur': '/logos_equipos/premier-league/tottenham-hotspur.svg',
 }
 
 const LIGA_MX_TEAM_DISPLAY_NAMES = [
@@ -213,11 +237,37 @@ const MLS_TEAM_DISPLAY_NAMES = [
   'Vancouver Whitecaps FC',
 ]
 
+// Participantes de la temporada 2026/27, verificados el 23 de noviembre de 2026:
+// https://www.premierleague.com/en/news/4672981/premier-league-club-kits-for-202627-season
+const PREMIER_LEAGUE_TEAM_DISPLAY_NAMES = [
+  'Arsenal',
+  'Aston Villa',
+  'Bournemouth',
+  'Brentford',
+  'Brighton & Hove Albion',
+  'Chelsea',
+  'Coventry City',
+  'Crystal Palace',
+  'Everton',
+  'Fulham',
+  'Hull City',
+  'Ipswich Town',
+  'Leeds United',
+  'Liverpool',
+  'Manchester City',
+  'Manchester United',
+  'Newcastle United',
+  'Nottingham Forest',
+  'Sunderland',
+  'Tottenham Hotspur',
+]
+
 export const TEAM_LOGOS: Record<string, string> = {
   ...COUNTRY_LOGOS,
   ...CLUB_LOGOS,
   ...EXPANSION_CLUB_LOGOS,
   ...MLS_CLUB_LOGOS,
+  ...PREMIER_LEAGUE_CLUB_LOGOS,
 }
 
 export function getTeamLogoSource(teamName: string) {
@@ -243,4 +293,5 @@ export function getTeamDisplayName(teamName: string) {
 export const LIGA_MX_TEAM_NAMES = LIGA_MX_TEAM_DISPLAY_NAMES
 export const EXPANSION_TEAM_NAMES = EXPANSION_TEAM_DISPLAY_NAMES
 export const MLS_TEAM_NAMES = MLS_TEAM_DISPLAY_NAMES
+export const PREMIER_LEAGUE_TEAM_NAMES = PREMIER_LEAGUE_TEAM_DISPLAY_NAMES
 export const INTERNATIONAL_TEAM_NAMES = Object.keys(COUNTRY_LOGOS)
